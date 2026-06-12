@@ -1,7 +1,8 @@
 {
-  "name": "spotted-anonimo",
-  "version": "0.1.0",
+  "name": "spotted2",
+  "version": "2.0.0",
   "private": true,
+  "homepage": "https://spotted2.vercel.app",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -16,10 +16,18 @@ export const metadata: Metadata = {
   title: "Spotted 2.0 | Because true love never dies",
   description: "Envie mensagens anônimas de forma segura. Spotted 2.0 - O sistema de mensagens anônimas mais seguro e moderno.",
   keywords: ["spotted", "anônimo", "mensagem", "confesssão", "universidade", "amor", "2.0"],
+  metadataBase: new URL("https://spotted2.vercel.app"),
   openGraph: {
     title: "Spotted 2.0 - Because true love never dies",
     description: "Envie mensagens anônimas de forma segura e livre de toxicidade",
+    url: "https://spotted2.vercel.app",
+    siteName: "Spotted 2.0",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Spotted 2.0",
+    description: "Envie mensagens anônimas de forma segura",
   },
 };
 

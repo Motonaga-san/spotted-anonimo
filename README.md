@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Spotted 2.0
 
-## Getting Started
+> Because true love never dies
 
-First, run the development server:
+Sistema de mensagens anônimas moderno e seguro.
+
+## URL
+
+**Produção:** https://spotted2.vercel.app
+
+## Funcionalidades
+
+- Posts anônimos com numeração automática
+- Sistema de denúncias comunitárias
+- Moderação automática (após 3 denúncias)
+- Comentários em cada spotted
+- Sistema de curtidas
+- Editor de texto com **negrito** e *itálico*
+- Estatísticas completas
+- Detecção de conteúdo tóxico
+
+## Tech Stack
+
+- **Frontend:** Next.js 16 + TypeScript + Tailwind CSS
+- **Backend:** Vercel Serverless Functions
+- **Banco de dados:** Supabase (PostgreSQL)
+- **Hospedagem:** Vercel
+
+## Desenvolvimento
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra [http://localhost:3000](http://localhost:3000) no navegador.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Páginas
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Página | URL | Descrição |
+|--------|-----|-----------|
+| Home | `/` | Página principal |
+| Admin | `/admin` | Painel de moderação |
+| Stats | `/stats` | Estatísticas do site |
 
-## Learn More
+## Variáveis de Ambiente
 
-To learn more about Next.js, take a look at the following resources:
+Crie um arquivo `.env.local` com:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+ADMIN_PASSWORD=your-admin-password
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy
 
-## Deploy on Vercel
+O deploy é automático via GitHub → Vercel a cada push na branch `main`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Licença
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
