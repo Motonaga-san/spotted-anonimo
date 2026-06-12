@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { supabase, Spotted, DailyStats } from '@/lib/supabase'
+import { supabase, Spotted, Comment, DailyStats } from '@/lib/supabase'
 import { contemPalavraProibida } from '@/lib/moderacao'
 
 export default function AdminPage() {
@@ -12,6 +12,7 @@ export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false)
   const [authError, setAuthError] = useState('')
   const [activeTab, setActiveTab] = useState<'reported' | 'all' | 'stats'>('reported')
+  const [reportedComments, setReportedComments] = useState<Comment[]>([])
   const [stats, setStats] = useState({
     totalSpotteds: 0,
     totalComments: 0,
@@ -108,14 +109,23 @@ export default function AdminPage() {
       .select('*')
       .gte('date', weekAgo)
 
+    // Buscar comentários reportados
+    const { data: reportedCommentsData } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('status', 'reported')
+      .order('created_at', { ascending: false })
+
     const reported = allSpotteds?.filter(s => s.status === 'reported') || []
+    const reportedCommentsCount = reportedCommentsData?.length || 0
 
     setSpotteds((allSpotteds as Spotted[]) || [])
+    setReportedComments((reportedCommentsData as Comment[]) || [])
     setStats({
       totalSpotteds: totalSpotteds || 0,
       totalComments: totalComments || 0,
       totalLikes: allSpottedsForLikes?.reduce((sum, s) => sum + (s.likes || 0), 0) || 0,
-      reportedCount: reported.length,
+      reportedCount: reported.length + reportedCommentsCount,
       todaySpotteds: todaySpotteds || 0,
       todayViews: todayViews || 0,
       weeklyData: (weeklyData as DailyStats[]) || [],
@@ -158,6 +168,37 @@ export default function AdminPage() {
 
     if (!res.ok) {
       alert('Erro ao excluir spotted')
+      return
+    }
+
+    fetchData()
+  }
+
+  const approveComment = async (id: string) => {
+    await fetch('/api/admin', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: 'comments', id, data: { status: 'approved' } })
+    })
+
+    await fetch('/api/admin', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: 'reports', comment_id: id, data: { status: 'reviewed' } })
+    })
+
+    fetchData()
+  }
+
+  const deleteComment = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este comentário permanentemente?')) return
+    
+    const res = await fetch(`/api/admin?table=comments&id=${id}`, {
+      method: 'DELETE'
+    })
+
+    if (!res.ok) {
+      alert('Erro ao excluir comentário')
       return
     }
 
@@ -399,7 +440,64 @@ export default function AdminPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {displayedSpotteds.length === 0 ? (
+            {/* Comentários Reportados */}
+            {activeTab === 'reported' && reportedComments.length > 0 && (
+              <>
+                <h3 className="text-lg font-bold text-orange-400 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  Comentários Denunciados ({reportedComments.length})
+                </h3>
+                {reportedComments.map((comment) => {
+                  const toxicCheck = contemPalavraProibida(comment.content)
+                  return (
+                    <div
+                      key={comment.id}
+                      className="bg-[#171717] rounded-2xl border border-orange-500/50 overflow-hidden"
+                    >
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">
+                            Comentário
+                          </span>
+                          <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
+                        </div>
+                        <p className="text-gray-300 whitespace-pre-wrap mb-3">{comment.content}</p>
+                        <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-3">
+                          <span>{comment.likes} curtidas</span>
+                          {toxicCheck.contem && (
+                            <>
+                              <span>•</span>
+                              <span className="text-orange-400">
+                                Termos: {toxicCheck.categorias.join(', ')}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2 pt-3 border-t border-[#262626]">
+                          <button
+                            onClick={() => approveComment(comment.id)}
+                            className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600"
+                          >
+                            Aprovar
+                          </button>
+                          <button
+                            onClick={() => deleteComment(comment.id)}
+                            className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600"
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+            
+            {/* Spotteds */}
+            {displayedSpotteds.length === 0 && reportedComments.length === 0 ? (
               <div className="bg-[#171717] rounded-2xl p-8 text-center border border-[#262626]">
                 <p className="text-gray-500">
                   {activeTab === 'reported' ? 'Nenhuma denúncia pendente!' : 'Nenhum spotted encontrado.'}
