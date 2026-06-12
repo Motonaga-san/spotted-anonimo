@@ -76,7 +76,7 @@ export async function PATCH(request: NextRequest) {
   })
 
   const body = await request.json()
-  const { table, id, spotted_id, data } = body
+  const { table, id, spotted_id, comment_id, data } = body
 
   if (!table || !data) {
     return NextResponse.json({ error: 'Missing table or data' }, { status: 400 })
@@ -88,8 +88,10 @@ export async function PATCH(request: NextRequest) {
     query = query.eq('id', id)
   } else if (spotted_id) {
     query = query.eq('spotted_id', spotted_id)
+  } else if (comment_id) {
+    query = query.eq('comment_id', comment_id)
   } else {
-    return NextResponse.json({ error: 'Missing id or spotted_id' }, { status: 400 })
+    return NextResponse.json({ error: 'Missing id, spotted_id or comment_id' }, { status: 400 })
   }
 
   const { error } = await query
