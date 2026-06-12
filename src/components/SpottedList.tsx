@@ -90,7 +90,7 @@ export default function SpottedList() {
     const fingerprint = generateFingerprint()
     const contentHtml = formatTextHtml(content)
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('comments')
       .insert([{
         spotted_id: spottedId,
@@ -99,8 +99,16 @@ export default function SpottedList() {
         status: 'approved',
         author_fingerprint: fingerprint,
       }])
+      .select()
 
-    if (!error) {
+    if (error) {
+      console.error('Erro ao salvar comentário:', error)
+      alert('Erro ao salvar comentário: ' + error.message)
+      return
+    }
+
+    if (data) {
+      console.log('Comentário salvo:', data)
       setNewComment(prev => ({ ...prev, [spottedId]: '' }))
       fetchComments(spottedId)
     }
