@@ -191,6 +191,14 @@ export default function AdminPage() {
   const deleteComment = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este comentário permanentemente?')) return
     
+    // Primeiro excluir os reports associados ao comentário
+    await fetch('/api/admin', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: 'reports', comment_id: id, data: { status: 'deleted' } })
+    })
+
+    // Depois excluir o comentário
     const res = await fetch(`/api/admin?table=comments&id=${id}`, {
       method: 'DELETE'
     })
