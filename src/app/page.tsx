@@ -1,7 +1,16 @@
+'use client'
+
+import { useEffect } from 'react'
 import SpottedForm from '@/components/SpottedForm'
 import SpottedList from '@/components/SpottedList'
+import { trackPageView } from '@/lib/supabase'
 
 export default function Home() {
+  useEffect(() => {
+    // Registra visualização da página
+    trackPageView('home')
+  }, [])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-pink-50">
       {/* Background decorativo */}
@@ -17,18 +26,23 @@ export default function Home() {
           {/* Logo */}
           <div className="inline-flex items-center justify-center w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-pink-500 via-red-500 to-orange-500 shadow-xl shadow-pink-500/25 mb-6">
             <svg className="w-10 h-10 md:w-12 md:h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
           </div>
 
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-4">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-2">
             Spotted{' '}
             <span className="bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 bg-clip-text text-transparent">
-              Anônimo
+              2.0
             </span>
           </h1>
           
-          <p className="text-gray-500 text-lg md:text-xl max-w-md mx-auto">
+          {/* Tagline */}
+          <p className="text-lg md:text-xl text-pink-500 font-medium italic mb-4">
+            "Because true love never dies"
+          </p>
+          
+          <p className="text-gray-500 max-w-md mx-auto">
             Envie mensagens de forma anônima e segura
           </p>
 
@@ -38,7 +52,7 @@ export default function Home() {
               100% Anônimo
             </span>
             <span className="px-3 py-1.5 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full text-xs font-medium text-gray-500 shadow-sm">
-              Moderação Manual
+              Moderação Comunitária
             </span>
             <span className="px-3 py-1.5 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full text-xs font-medium text-gray-500 shadow-sm">
               Livre de Toxicidade
@@ -58,7 +72,7 @@ export default function Home() {
           {/* Divisor */}
           <div className="flex items-center gap-4 w-full max-w-xl">
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-            <span className="text-gray-400 text-sm">spotteds aprovados</span>
+            <span className="text-gray-400 text-sm">spotteds públicos</span>
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
           </div>
 
@@ -71,16 +85,23 @@ export default function Home() {
         {/* Footer */}
         <footer className="text-center mt-16 md:mt-24 py-8 border-t border-gray-100">
           <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-sm text-gray-400">
-            <p>Seu spotted é anônimo e será revisado antes de ser publicado.</p>
+            <p>Posts são publicados automaticamente.</p>
             <span className="hidden md:inline">•</span>
-            <p>Não toleramos preconceito ou toxicidade.</p>
+            <p>Conteúdo ofensivo pode ser denunciado.</p>
           </div>
-          <div className="mt-4">
+          <div className="mt-4 flex items-center justify-center gap-4">
             <a 
               href="/admin" 
               className="text-xs text-gray-300 hover:text-gray-500 transition-colors"
             >
               Painel Admin
+            </a>
+            <span className="text-gray-200">•</span>
+            <a 
+              href="/stats" 
+              className="text-xs text-gray-300 hover:text-gray-500 transition-colors"
+            >
+              Estatísticas
             </a>
           </div>
         </footer>

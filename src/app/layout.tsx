@@ -13,12 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Spotted Anônimo | Envie mensagens de forma segura",
-  description: "Envie mensagens anônimas de forma segura e sem preconceito. Spotteds são moderados para garantir um ambiente saudável.",
-  keywords: ["spotted", "anônimo", "mensagem", "confesssão", "universidade"],
+  title: "Spotted 2.0 | Because true love never dies",
+  description: "Envie mensagens anônimas de forma segura. Spotted 2.0 - O sistema de mensagens anônimas mais seguro e moderno.",
+  keywords: ["spotted", "anônimo", "mensagem", "confesssão", "universidade", "amor", "2.0"],
   openGraph: {
-    title: "Spotted Anônimo",
-    description: "Envie mensagens anônimas de forma segura",
+    title: "Spotted 2.0 - Because true love never dies",
+    description: "Envie mensagens anônimas de forma segura e livre de toxicidade",
     type: "website",
   },
 };
