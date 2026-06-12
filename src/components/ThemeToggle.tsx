@@ -1,16 +1,29 @@
 'use client'
 
 import { useTheme } from '@/context/ThemeContext'
+import { useEffect, useState } from 'react'
 
 export default function ThemeToggle() {
   const { theme, toggleTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <div className="fixed top-4 right-4 z-[9999] p-3 rounded-full bg-pink-500" style={{ minWidth: '48px', minHeight: '48px' }} />
+    )
+  }
 
   return (
     <button
       onClick={toggleTheme}
-      className="fixed top-4 right-4 z-50 p-3 rounded-full bg-gradient-to-br from-pink-500 to-orange-500 text-white shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50 hover:scale-110 transition-all duration-200"
+      className="fixed top-4 right-4 z-[9999] p-3 rounded-full bg-gradient-to-br from-pink-500 to-orange-500 text-white shadow-lg hover:scale-110 transition-transform duration-200"
       title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
       style={{ minWidth: '48px', minHeight: '48px' }}
+      aria-label="Alternar tema"
     >
       {theme === 'dark' ? (
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
