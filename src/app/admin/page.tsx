@@ -109,15 +109,13 @@ export default function AdminPage() {
       .select('*')
       .gte('date', weekAgo)
 
-    // Buscar comentários reportados
-    const { data: reportedCommentsData } = await supabase
-      .from('comments')
-      .select('*')
-      .eq('status', 'reported')
-      .order('created_at', { ascending: false })
-
     const reported = allSpotteds?.filter(s => s.status === 'reported') || []
-    const reportedCommentsCount = reportedCommentsData?.length || 0
+
+    // Buscar comentários reportados via API (usa service_role)
+    const reportedRes = await fetch('/api/admin?action=get-reported')
+    const reportedData = await reportedRes.json()
+    const reportedCommentsData = reportedData.comments || []
+    const reportedCommentsCount = reportedCommentsData.length
 
     setSpotteds((allSpotteds as Spotted[]) || [])
     setReportedComments((reportedCommentsData as Comment[]) || [])

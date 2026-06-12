@@ -4,6 +4,41 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
+export async function GET(request: NextRequest) {
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+
+  const { searchParams } = new URL(request.url)
+  const action = searchParams.get('action')
+
+  if (action === 'get-reported') {
+    // Buscar spotteds reportados
+    const { data: reportedSpotteds } = await supabase
+      .from('spotteds')
+      .select('*')
+      .eq('status', 'reported')
+      .order('created_at', { ascending: false })
+
+    // Buscar comentários reportados
+    const { data: reportedComments } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('status', 'reported')
+      .order('created_at', { ascending: false })
+
+    return NextResponse.json({
+      spotteds: reportedSpotteds || [],
+      comments: reportedComments || []
+    })
+  }
+
+  return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+}
+
 export async function DELETE(request: NextRequest) {
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
