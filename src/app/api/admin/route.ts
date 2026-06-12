@@ -55,6 +55,27 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Missing table or id' }, { status: 400 })
   }
 
+  // Se for comentário, primeiro excluir os reports associados
+  if (table === 'comments') {
+    await supabase
+      .from('reports')
+      .delete()
+      .eq('comment_id', id)
+  }
+
+  // Se for spotted, primeiro excluir comentários e reports associados
+  if (table === 'spotteds') {
+    await supabase
+      .from('comments')
+      .delete()
+      .eq('spotted_id', id)
+    
+    await supabase
+      .from('reports')
+      .delete()
+      .eq('spotted_id', id)
+  }
+
   const { error } = await supabase
     .from(table)
     .delete()
