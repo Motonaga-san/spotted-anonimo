@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { supabase, generateFingerprint } from '@/lib/supabase'
+import { supabase, generateFingerprint, getVisitorInfo } from '@/lib/supabase'
+import { useTheme } from '@/context/ThemeContext'
 import { contemPalavraProibida, formatTextHtml } from '@/lib/moderacao'
 
 interface SpottedFormProps {
@@ -16,6 +17,8 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
   const [warning, setWarning] = useState('')
   const [showPreview, setShowPreview] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
 
   const applyFormat = (format: 'bold' | 'italic') => {
     const textarea = textareaRef.current
@@ -71,6 +74,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
 
     const fingerprint = generateFingerprint()
     const messageHtml = formatTextHtml(message)
+    const visitorInfo = await getVisitorInfo()
 
     const { error: submitError } = await supabase
       .from('spotteds')
@@ -82,6 +86,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
         views: 0,
         reports_count: 0,
         author_fingerprint: fingerprint,
+        author_ip: visitorInfo.ip,
       }])
 
     if (submitError) {

@@ -65,6 +65,13 @@ export interface DailyStats {
   likes_given: number
 }
 
+export interface VisitorInfo {
+  ip: string
+  userAgent: string
+  country: string
+  city: string
+}
+
 // Gera fingerprint do navegador
 export function generateFingerprint(): string {
   if (typeof window === 'undefined') return ''
@@ -82,25 +89,31 @@ export function generateFingerprint(): string {
   return btoa(fingerprint).slice(0, 64)
 }
 
-// Registra visualização de página
+// Busca informações do visitante (IP, localização)
+export async function getVisitorInfo(): Promise<VisitorInfo> {
+  try {
+    const response = await fetch('/api/ip')
+    return await response.json()
+  } catch {
+    return { ip: 'unknown', userAgent: '', country: '', city: '' }
+  }
+}
+
+// Registra visualização de página com IP real
 export async function trackPageView(page: string): Promise<void> {
   if (!supabase) return
   
   const fingerprint = generateFingerprint()
+  const visitorInfo = await getVisitorInfo()
   
   await supabase.from('page_views').insert([{
     page,
+    visitor_ip: visitorInfo.ip,
     visitor_fingerprint: fingerprint,
-    user_agent: navigator.userAgent,
-    referrer: document.referrer || null,
+    user_agent: visitorInfo.userAgent,
+    referrer: typeof document !== 'undefined' ? document.referrer || null : null,
+    country: visitorInfo.country,
   }])
-}
-
-// Incrementa visualização do spotted
-export async function incrementSpottedView(id: string): Promise<void> {
-  if (!supabase) return
-  
-  await supabase.rpc('increment_spotted_views', { spotted_id: id })
 }
 
 // Formata texto com markdown básico (negrito, itálico)
