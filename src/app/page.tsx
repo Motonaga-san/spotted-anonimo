@@ -1,3 +1,5 @@
+'use client'
+
 import SpottedForm from '@/components/SpottedForm'
 import SpottedList from '@/components/SpottedList'
 import { trackPageView } from '@/lib/supabase'
