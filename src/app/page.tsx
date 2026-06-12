@@ -5,30 +5,19 @@ import SpottedForm from '@/components/SpottedForm'
 import SpottedList from '@/components/SpottedList'
 import ThemeToggle from '@/components/ThemeToggle'
 import { trackPageView } from '@/lib/supabase'
-import { useTheme } from '@/context/ThemeContext'
 
 export default function Home() {
-  // Use try-catch to handle SSR when ThemeProvider is not available
-  let theme = 'dark'
-  try {
-    const context = useTheme()
-    theme = context.theme
-  } catch {
-    // ThemeProvider not available during SSR
-  }
-  const isDark = theme === 'dark'
-  
   useEffect(() => {
     trackPageView('home')
   }, [])
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-[#0a0a0a]' : 'bg-gray-50'}`}>
+    <div className="min-h-screen bg-background transition-colors duration-300">
       {/* Background decorativo */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className={`absolute -top-40 -right-40 w-80 h-80 rounded-full blur-3xl ${isDark ? 'bg-gradient-to-br from-pink-500/20 to-orange-500/10' : 'bg-gradient-to-br from-pink-200 to-orange-100'}`} />
-        <div className={`absolute top-1/2 -left-40 w-80 h-80 rounded-full blur-3xl ${isDark ? 'bg-gradient-to-br from-purple-500/15 to-pink-500/10' : 'bg-gradient-to-br from-purple-200 to-pink-100'}`} />
-        <div className={`absolute -bottom-40 right-1/3 w-80 h-80 rounded-full blur-3xl ${isDark ? 'bg-gradient-to-br from-orange-500/10 to-yellow-500/5' : 'bg-gradient-to-br from-orange-200 to-yellow-100'}`} />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-pink-500/20 to-orange-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-gradient-to-br from-purple-500/15 to-pink-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 right-1/3 w-80 h-80 bg-gradient-to-br from-orange-500/10 to-yellow-500/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative container mx-auto px-4 py-8 md:py-12">
@@ -46,7 +35,7 @@ export default function Home() {
             </svg>
           </div>
 
-          <h1 className={`text-4xl md:text-5xl lg:text-6xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary mb-2">
             Spotted{' '}
             <span className="bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 bg-clip-text text-transparent">
               2.0
@@ -58,19 +47,19 @@ export default function Home() {
             "Because true love never dies"
           </p>
           
-          <p className={`max-w-md mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+          <p className="max-w-md mx-auto text-secondary">
             Envie mensagens de forma anônima e segura
           </p>
 
           {/* Tags */}
           <div className="flex flex-wrap justify-center gap-2 mt-6">
-            <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${isDark ? 'bg-[#171717] border border-[#262626] text-gray-400' : 'bg-white/80 border border-gray-200 text-gray-500'}`}>
+            <span className="px-3 py-1.5 card-theme rounded-full text-xs font-medium text-secondary">
               100% Anônimo
             </span>
-            <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${isDark ? 'bg-[#171717] border border-[#262626] text-gray-400' : 'bg-white/80 border border-gray-200 text-gray-500'}`}>
+            <span className="px-3 py-1.5 card-theme rounded-full text-xs font-medium text-secondary">
               Moderação Comunitária
             </span>
-            <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${isDark ? 'bg-[#171717] border border-[#262626] text-gray-400' : 'bg-white/80 border border-gray-200 text-gray-500'}`}>
+            <span className="px-3 py-1.5 card-theme rounded-full text-xs font-medium text-secondary">
               Livre de Toxicidade
             </span>
           </div>
@@ -80,16 +69,16 @@ export default function Home() {
         <main className="flex flex-col items-center gap-12 md:gap-16">
           {/* Formulário */}
           <section className="w-full max-w-xl">
-            <div className={`p-6 md:p-8 rounded-3xl shadow-xl ${isDark ? 'bg-[#171717] border border-[#262626] shadow-pink-500/5' : 'bg-white/80 border border-gray-100 shadow-gray-200/50'}`}>
+            <div className="card-theme p-6 md:p-8 rounded-3xl shadow-xl">
               <SpottedForm />
             </div>
           </section>
 
           {/* Divisor */}
           <div className="flex items-center gap-4 w-full max-w-xl">
-            <div className={`flex-1 h-px ${isDark ? 'bg-gradient-to-r from-transparent via-[#262626] to-transparent' : 'bg-gradient-to-r from-transparent via-gray-200 to-transparent'}`} />
-            <span className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>spotteds públicos</span>
-            <div className={`flex-1 h-px ${isDark ? 'bg-gradient-to-r from-transparent via-[#262626] to-transparent' : 'bg-gradient-to-r from-transparent via-gray-200 to-transparent'}`} />
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+            <span className="text-sm text-muted">spotteds públicos</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
           </div>
 
           {/* Lista */}
@@ -99,8 +88,8 @@ export default function Home() {
         </main>
 
         {/* Footer */}
-        <footer className={`text-center mt-16 md:mt-24 py-8 ${isDark ? 'border-t border-[#262626]' : 'border-t border-gray-100'}`}>
-          <div className={`flex flex-col md:flex-row items-center justify-center gap-4 text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+        <footer className="text-center mt-16 md:mt-24 py-8 border-t border-border">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-sm text-muted">
             <p>Posts são publicados automaticamente.</p>
             <span className="hidden md:inline">•</span>
             <p>Conteúdo ofensivo pode ser denunciado.</p>
@@ -108,14 +97,14 @@ export default function Home() {
           <div className="mt-4 flex items-center justify-center gap-4">
             <a 
               href="/admin" 
-              className={`text-xs transition-colors ${isDark ? 'text-gray-600 hover:text-gray-400' : 'text-gray-300 hover:text-gray-500'}`}
+              className="text-xs text-muted hover:text-secondary transition-colors"
             >
               Painel Admin
             </a>
-            <span className={isDark ? 'text-gray-700' : 'text-gray-200'}>•</span>
+            <span className="text-border">•</span>
             <a 
               href="/stats" 
-              className={`text-xs transition-colors ${isDark ? 'text-gray-600 hover:text-gray-400' : 'text-gray-300 hover:text-gray-500'}`}
+              className="text-xs text-muted hover:text-secondary transition-colors"
             >
               Estatísticas
             </a>

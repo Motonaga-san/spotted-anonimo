@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase, Spotted, Comment, generateFingerprint } from '@/lib/supabase'
 import { formatTextHtml } from '@/lib/moderacao'
 import { REPORT_REASONS } from '@/lib/moderacao'
-import { useTheme } from '@/context/ThemeContext'
  
 export default function SpottedList() {
   const [spotteds, setSpotteds] = useState<Spotted[]>([])
@@ -16,8 +15,6 @@ export default function SpottedList() {
   const [reportingSpotted, setReportingSpotted] = useState<string | null>(null)
   const [reportReason, setReportReason] = useState('')
   const [reportSuccess, setReportSuccess] = useState(false)
-  const { theme } = useTheme()
-  const isDark = theme === 'dark'
 
   useEffect(() => {
     if (supabase) {
