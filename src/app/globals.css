@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafafa;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --card-bg: #171717;
+  --card-border: #262626;
+  --input-bg: #262626;
+  --input-border: #404040;
+  --text-primary: #fafafa;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
 }
 
 @theme inline {
@@ -92,14 +99,14 @@ body {
   animation: bounce-in 0.5s ease-out forwards;
 }
 
-/* Scrollbar customizada */
+/* Scrollbar customizada - Dark Mode */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #171717;
   border-radius: 4px;
 }
 
@@ -114,7 +121,7 @@ body {
 
 /* Seleção de texto */
 ::selection {
-  background: rgba(236, 72, 153, 0.2);
+  background: rgba(236, 72, 153, 0.3);
   color: inherit;
 }
 
@@ -126,7 +133,7 @@ body {
 
 /* Placeholder */
 ::placeholder {
-  color: #9ca3af;
+  color: #737373;
   opacity: 1;
 }
 
@@ -142,12 +149,12 @@ html {
 
 .hover-lift:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 24px -8px rgba(236, 72, 153, 0.2);
 }
 
-/* Glass effect */
+/* Glass effect - Dark */
 .glass {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(23, 23, 23, 0.8);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -158,4 +165,40 @@ html {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Card dark style */
+.card-dark {
+  background: #171717;
+  border: 1px solid #262626;
+}
+
+/* Input dark style */
+.input-dark {
+  background: #262626;
+  border: 2px solid #404040;
+  color: #fafafa;
+}
+
+.input-dark:focus {
+  border-color: #ec4899;
+  box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.1);
+}
+
+/* Button styles */
+.btn-primary {
+  background: linear-gradient(135deg, #ec4899, #f97316);
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 20px -4px rgba(236, 72, 153, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }

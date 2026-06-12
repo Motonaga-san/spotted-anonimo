@@ -111,7 +111,6 @@ export default function SpottedList() {
 
     const fingerprint = generateFingerprint()
 
-    // Cria a denúncia
     const { error: reportError } = await supabase
       .from('reports')
       .insert([{
@@ -121,16 +120,10 @@ export default function SpottedList() {
         status: 'pending',
       }])
 
-    if (reportError) {
-      console.error('Erro ao denunciar:', reportError)
-      return
-    }
+    if (reportError) return
 
-    // Atualiza contador de denúncias no spotted
     const spotted = spotteds.find(s => s.id === spottedId)
     const newReportsCount = (spotted?.reports_count || 0) + 1
-
-    // Se tiver muitas denúncias, muda status para reported
     const newStatus = newReportsCount >= 3 ? 'reported' : 'approved'
 
     await supabase
@@ -142,14 +135,12 @@ export default function SpottedList() {
     setReportReason('')
     setReportSuccess(true)
     
-    // Atualiza localmente
     setSpotteds(spotteds.map(s => 
       s.id === spottedId 
         ? { ...s, reports_count: newReportsCount, status: newStatus } 
         : s
     ))
 
-    // Remove da lista se foi reportado
     if (newStatus === 'reported') {
       setSpotteds(prev => prev.filter(s => s.id !== spottedId))
     }
@@ -181,8 +172,8 @@ export default function SpottedList() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 space-y-4">
-        <div className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin" />
-        <p className="text-gray-400">Carregando spotteds...</p>
+        <div className="w-12 h-12 border-4 border-pink-500/30 border-t-pink-500 rounded-full animate-spin" />
+        <p className="text-gray-500">Carregando spotteds...</p>
       </div>
     )
   }
@@ -190,14 +181,14 @@ export default function SpottedList() {
   if (spotteds.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 space-y-4">
-        <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="w-20 h-20 bg-[#171717] rounded-full flex items-center justify-center border border-[#262626]">
+          <svg className="w-10 h-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
         </div>
-        <p className="text-gray-400 text-center">
+        <p className="text-gray-500 text-center">
           Nenhum spotted ainda.<br />
-          <span className="text-gray-300">Seja o primeiro!</span>
+          <span className="text-gray-600">Seja o primeiro!</span>
         </p>
       </div>
     )
@@ -210,14 +201,14 @@ export default function SpottedList() {
         <h2 className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-orange-500 bg-clip-text text-transparent">
           Spotteds Recentes
         </h2>
-        <span className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">
+        <span className="px-3 py-1 bg-[#171717] border border-[#262626] rounded-full text-sm text-gray-400">
           {spotteds.length} {spotteds.length === 1 ? 'spotted' : 'spotteds'}
         </span>
       </div>
 
       {/* Mensagem de denúncia sucesso */}
       {reportSuccess && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 animate-fade-in">
+        <div className="p-4 bg-green-900/30 border border-green-700/50 rounded-xl text-green-400 animate-fade-in">
           Denúncia enviada com sucesso. Obrigado por ajudar a manter a comunidade segura!
         </div>
       )}
@@ -227,7 +218,7 @@ export default function SpottedList() {
         {spotteds.map((spotted, index) => (
           <div
             key={spotted.id}
-            className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100"
+            className="group bg-[#171717] rounded-2xl shadow-lg shadow-pink-500/5 hover:shadow-pink-500/10 transition-all duration-300 overflow-hidden border border-[#262626]"
             style={{ animationDelay: `${index * 50}ms` }}
           >
             {/* Barra de cor no topo */}
@@ -237,15 +228,15 @@ export default function SpottedList() {
             <div className="p-5">
               {/* Número e data */}
               <div className="flex items-center justify-between mb-3">
-                <span className="px-3 py-1 bg-gradient-to-r from-pink-100 to-orange-100 rounded-full text-sm font-bold text-pink-600">
+                <span className="px-3 py-1 bg-gradient-to-r from-pink-500/20 to-orange-500/20 border border-pink-500/30 rounded-full text-sm font-bold text-pink-400">
                   #{spotted.number || '?'}
                 </span>
-                <span className="text-xs text-gray-400">{formatDate(spotted.created_at)}</span>
+                <span className="text-xs text-gray-500">{formatDate(spotted.created_at)}</span>
               </div>
 
               {/* Ícone anônimo e mensagem */}
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#262626] to-[#404040] flex items-center justify-center flex-shrink-0">
                   <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
@@ -253,14 +244,14 @@ export default function SpottedList() {
                 
                 <div className="flex-1 min-w-0">
                   <p 
-                    className="text-gray-800 break-words leading-relaxed"
+                    className="text-gray-200 break-words leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: spotted.message_html || spotted.message }}
                   />
                 </div>
               </div>
 
               {/* Ações */}
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#262626]">
                 <div className="flex items-center gap-1">
                   {/* Curtir */}
                   <button
@@ -268,8 +259,8 @@ export default function SpottedList() {
                     disabled={likedSpotteds.includes(spotted.id)}
                     className={`flex items-center gap-1 px-3 py-1.5 rounded-full transition-all ${
                       likedSpotteds.includes(spotted.id)
-                        ? 'bg-red-50 text-red-500'
-                        : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                        ? 'bg-red-500/20 text-red-400'
+                        : 'text-gray-500 hover:text-red-400 hover:bg-red-500/10'
                     }`}
                   >
                     <svg className={`w-4 h-4 ${likedSpotteds.includes(spotted.id) ? 'fill-current' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -283,8 +274,8 @@ export default function SpottedList() {
                     onClick={() => toggleComments(spotted.id)}
                     className={`flex items-center gap-1 px-3 py-1.5 rounded-full transition-all ${
                       openComments.includes(spotted.id)
-                        ? 'bg-blue-50 text-blue-500'
-                        : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'text-gray-500 hover:text-blue-400 hover:bg-blue-500/10'
                     }`}
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -298,7 +289,7 @@ export default function SpottedList() {
                   {/* Compartilhar */}
                   <button
                     onClick={() => copyToClipboard(spotted.id)}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-2 text-gray-500 hover:text-white hover:bg-[#262626] rounded-full transition-colors"
                     title="Copiar link"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -309,7 +300,7 @@ export default function SpottedList() {
                   {/* Denunciar */}
                   <button
                     onClick={() => setReportingSpotted(spotted.id)}
-                    className="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-full transition-colors"
+                    className="p-2 text-gray-500 hover:text-orange-400 hover:bg-orange-500/10 rounded-full transition-colors"
                     title="Denunciar"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -321,26 +312,26 @@ export default function SpottedList() {
 
               {/* Seção de comentários */}
               {openComments.includes(spotted.id) && (
-                <div className="mt-4 pt-4 border-t border-gray-100 space-y-3 animate-fade-in">
+                <div className="mt-4 pt-4 border-t border-[#262626] space-y-3 animate-fade-in">
                   {/* Lista de comentários */}
                   {comments[spotted.id]?.map((comment) => (
                     <div key={comment.id} className="flex gap-2 items-start">
-                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="w-6 h-6 rounded-full bg-[#262626] flex items-center justify-center flex-shrink-0">
+                        <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                       </div>
-                      <div className="flex-1 bg-gray-50 rounded-lg p-2">
-                        <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }} />
-                        <span className="text-xs text-gray-400">{formatDate(comment.created_at)}</span>
+                      <div className="flex-1 bg-[#262626] rounded-lg p-2">
+                        <p className="text-sm text-gray-300" dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }} />
+                        <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
                       </div>
                     </div>
                   ))}
 
                   {/* Input para novo comentário */}
                   <div className="flex gap-2 items-start mt-3">
-                    <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-3 h-3 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-6 h-6 rounded-full bg-pink-500/20 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-3 h-3 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                     </div>
@@ -349,7 +340,7 @@ export default function SpottedList() {
                       value={newComment[spotted.id] || ''}
                       onChange={(e) => setNewComment(prev => ({ ...prev, [spotted.id]: e.target.value }))}
                       placeholder="Escreva um comentário..."
-                      className="flex-1 p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400"
+                      className="flex-1 p-2 bg-[#262626] border border-[#404040] rounded-lg text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
                       maxLength={500}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -377,10 +368,10 @@ export default function SpottedList() {
 
       {/* Modal de Denúncia */}
       {reportingSpotted && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 animate-fade-in">
-            <h3 className="text-xl font-bold text-gray-800">Denunciar Spotted</h3>
-            <p className="text-sm text-gray-500">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#171717] border border-[#262626] rounded-2xl max-w-md w-full p-6 space-y-4 animate-fade-in">
+            <h3 className="text-xl font-bold text-white">Denunciar Spotted</h3>
+            <p className="text-sm text-gray-400">
               Ajude-nos a manter a comunidade segura. Denúncias anônimas são revisadas por moderadores.
             </p>
             
@@ -390,8 +381,8 @@ export default function SpottedList() {
                   key={reason.value}
                   className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                     reportReason === reason.value 
-                      ? 'border-pink-500 bg-pink-50' 
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-pink-500 bg-pink-500/10' 
+                      : 'border-[#262626] hover:border-[#404040]'
                   }`}
                 >
                   <input
@@ -402,7 +393,7 @@ export default function SpottedList() {
                     onChange={(e) => setReportReason(e.target.value)}
                     className="w-4 h-4 text-pink-500"
                   />
-                  <span className="text-sm text-gray-700">{reason.label}</span>
+                  <span className="text-sm text-gray-300">{reason.label}</span>
                 </label>
               ))}
             </div>
@@ -410,7 +401,7 @@ export default function SpottedList() {
             <div className="flex gap-3">
               <button
                 onClick={() => { setReportingSpotted(null); setReportReason(''); }}
-                className="flex-1 py-3 px-4 bg-gray-100 text-gray-600 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                className="flex-1 py-3 px-4 bg-[#262626] text-gray-400 font-medium rounded-xl hover:bg-[#404040] transition-colors"
               >
                 Cancelar
               </button>

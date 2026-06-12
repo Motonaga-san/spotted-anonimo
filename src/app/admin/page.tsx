@@ -1,18 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase, Spotted, Comment, Report, DailyStats } from '@/lib/supabase'
+import { supabase, Spotted, DailyStats } from '@/lib/supabase'
 import { contemPalavraProibida } from '@/lib/moderacao'
 
 export default function AdminPage() {
   const [spotteds, setSpotteds] = useState<Spotted[]>([])
-  const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
   const [password, setPassword] = useState('')
   const [authenticated, setAuthenticated] = useState(false)
   const [authError, setAuthError] = useState('')
   const [activeTab, setActiveTab] = useState<'reported' | 'all' | 'stats'>('reported')
-  const [selectedSpotted, setSelectedSpotted] = useState<Spotted | null>(null)
   const [stats, setStats] = useState({
     totalSpotteds: 0,
     totalComments: 0,
@@ -50,28 +48,12 @@ export default function AdminPage() {
   const fetchData = async () => {
     if (!supabase) return
 
-    // Spotteds reportados
-    const { data: reportedSpotteds } = await supabase
-      .from('spotteds')
-      .select('*')
-      .eq('status', 'reported')
-      .order('reports_count', { ascending: false })
-
-    // Todos os spotteds
     const { data: allSpotteds } = await supabase
       .from('spotteds')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(100)
 
-    // Denúncias pendentes
-    const { data: reportsData } = await supabase
-      .from('reports')
-      .select('*')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-
-    // Stats
     const { count: totalSpotteds } = await supabase
       .from('spotteds')
       .select('*', { count: 'exact', head: true })
@@ -104,7 +86,6 @@ export default function AdminPage() {
     const reported = allSpotteds?.filter(s => s.status === 'reported') || []
 
     setSpotteds((allSpotteds as Spotted[]) || [])
-    setReports((reportsData as Report[]) || [])
     setStats({
       totalSpotteds: totalSpotteds || 0,
       totalComments: totalComments || 0,
@@ -125,14 +106,12 @@ export default function AdminPage() {
       .update({ status: 'approved', reports_count: 0 })
       .eq('id', id)
 
-    // Marca denúncias como revisadas
     await supabase
       .from('reports')
       .update({ status: 'reviewed' })
       .eq('spotted_id', id)
 
     fetchData()
-    setSelectedSpotted(null)
   }
 
   const hideSpotted = async (id: string) => {
@@ -144,7 +123,6 @@ export default function AdminPage() {
       .eq('id', id)
 
     fetchData()
-    setSelectedSpotted(null)
   }
 
   const deleteSpotted = async (id: string) => {
@@ -156,7 +134,6 @@ export default function AdminPage() {
       .eq('id', id)
 
     fetchData()
-    setSelectedSpotted(null)
   }
 
   const dismissReports = async (spottedId: string) => {
@@ -179,42 +156,41 @@ export default function AdminPage() {
     return new Date(dateString).toLocaleString('pt-BR')
   }
 
-  // Spotteds a mostrar baseado na tab
   const displayedSpotteds = activeTab === 'reported' 
     ? spotteds.filter(s => s.status === 'reported')
     : spotteds
 
   if (!authenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8">
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
+        <div className="bg-[#171717] border border-[#262626] rounded-3xl shadow-2xl max-w-md w-full p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-orange-500 shadow-lg mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-orange-500 shadow-lg shadow-pink-500/25 mb-4">
               <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800">Painel Admin</h1>
+            <h1 className="text-2xl font-bold text-white">Painel Admin</h1>
             <p className="text-gray-500 mt-1">Spotted 2.0</p>
           </div>
           
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-400 mb-2">
                 Senha de Administrador
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-pink-200 focus:border-pink-400 transition-all"
+                className="w-full p-4 bg-[#262626] border-2 border-[#404040] rounded-xl focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 transition-all text-white placeholder-gray-500"
                 placeholder="Digite a senha"
               />
             </div>
-            {authError && <p className="text-red-500 text-sm text-center">{authError}</p>}
+            {authError && <p className="text-red-400 text-sm text-center">{authError}</p>}
             <button
               type="submit"
-              className="w-full py-4 bg-gradient-to-r from-pink-500 to-orange-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+              className="w-full py-4 bg-gradient-to-r from-pink-500 to-orange-500 text-white font-semibold rounded-xl shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 transition-all"
             >
               Entrar
             </button>
@@ -226,16 +202,16 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-pink-500/30 border-t-pink-500 rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#0a0a0a]">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <header className="bg-[#171717] border-b border-[#262626] sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -245,11 +221,11 @@ export default function AdminPage() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-800">Painel Admin</h1>
+                <h1 className="text-xl font-bold text-white">Painel Admin</h1>
                 <p className="text-xs text-gray-500">Spotted 2.0</p>
               </div>
             </div>
-            <a href="/" className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
+            <a href="/" className="text-sm text-gray-500 hover:text-white flex items-center gap-1">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
@@ -262,24 +238,24 @@ export default function AdminPage() {
       <main className="container mx-auto px-4 py-6">
         {/* Stats Rápidos */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-4 border border-gray-100">
-            <p className="text-2xl font-bold text-gray-800">{stats.totalSpotteds}</p>
+          <div className="bg-[#171717] rounded-xl p-4 border border-[#262626]">
+            <p className="text-2xl font-bold text-white">{stats.totalSpotteds}</p>
             <p className="text-xs text-gray-500">Total Spotteds</p>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-gray-100">
-            <p className="text-2xl font-bold text-blue-500">{stats.totalComments}</p>
+          <div className="bg-[#171717] rounded-xl p-4 border border-[#262626]">
+            <p className="text-2xl font-bold text-blue-400">{stats.totalComments}</p>
             <p className="text-xs text-gray-500">Comentários</p>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-gray-100">
-            <p className="text-2xl font-bold text-red-500">{stats.totalLikes}</p>
+          <div className="bg-[#171717] rounded-xl p-4 border border-[#262626]">
+            <p className="text-2xl font-bold text-red-400">{stats.totalLikes}</p>
             <p className="text-xs text-gray-500">Curtidas</p>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-gray-100">
-            <p className="text-2xl font-bold text-orange-500">{stats.reportedCount}</p>
+          <div className="bg-[#171717] rounded-xl p-4 border border-[#262626]">
+            <p className="text-2xl font-bold text-orange-400">{stats.reportedCount}</p>
             <p className="text-xs text-gray-500">Reportados</p>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-gray-100">
-            <p className="text-2xl font-bold text-green-500">{stats.todayViews}</p>
+          <div className="bg-[#171717] rounded-xl p-4 border border-[#262626]">
+            <p className="text-2xl font-bold text-green-400">{stats.todayViews}</p>
             <p className="text-xs text-gray-500">Visitas Hoje</p>
           </div>
         </div>
@@ -296,8 +272,8 @@ export default function AdminPage() {
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
               className={`px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-all ${
                 activeTab === tab.id
-                  ? 'bg-gradient-to-r from-pink-500 to-orange-500 text-white shadow-md'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  ? 'bg-gradient-to-r from-pink-500 to-orange-500 text-white shadow-lg shadow-pink-500/25'
+                  : 'bg-[#171717] text-gray-400 hover:bg-[#262626] border border-[#262626]'
               }`}
             >
               {tab.label}
@@ -314,8 +290,8 @@ export default function AdminPage() {
         {activeTab === 'stats' ? (
           <div className="space-y-6">
             {/* Gráfico semanal */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100">
-              <h3 className="font-bold text-gray-800 mb-4">Atividade da Semana</h3>
+            <div className="bg-[#171717] rounded-2xl p-6 border border-[#262626]">
+              <h3 className="font-bold text-white mb-4">Atividade da Semana</h3>
               <div className="flex items-end gap-2 h-40">
                 {stats.weeklyData.length > 0 ? stats.weeklyData.map((day) => {
                   const height = day.spotteds_created ? Math.min(day.spotteds_created * 20, 100) : 5
@@ -327,41 +303,41 @@ export default function AdminPage() {
                         className="w-full bg-gradient-to-t from-pink-500 to-orange-400 rounded-t-lg"
                         style={{ height: `${height}%` }}
                       />
-                      <span className="text-xs text-gray-400">{dayName}</span>
-                      <span className="text-xs text-gray-600">{day.spotteds_created} posts</span>
+                      <span className="text-xs text-gray-500">{dayName}</span>
+                      <span className="text-xs text-gray-400">{day.spotteds_created} posts</span>
                     </div>
                   )
                 }) : (
-                  <p className="text-gray-400 text-sm w-full text-center">Sem dados suficientes</p>
+                  <p className="text-gray-500 text-sm w-full text-center">Sem dados suficientes</p>
                 )}
               </div>
             </div>
 
             {/* Resumo */}
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-white rounded-2xl p-6 border border-gray-100">
-                <h3 className="font-bold text-gray-800 mb-4">Hoje</h3>
+              <div className="bg-[#171717] rounded-2xl p-6 border border-[#262626]">
+                <h3 className="font-bold text-white mb-4">Hoje</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Novos Spotteds</span>
-                    <span className="font-bold">{stats.todaySpotteds}</span>
+                    <span className="font-bold text-white">{stats.todaySpotteds}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Visitas</span>
-                    <span className="font-bold">{stats.todayViews}</span>
+                    <span className="font-bold text-white">{stats.todayViews}</span>
                   </div>
                 </div>
               </div>
-              <div className="bg-white rounded-2xl p-6 border border-gray-100">
-                <h3 className="font-bold text-gray-800 mb-4">Médias</h3>
+              <div className="bg-[#171717] rounded-2xl p-6 border border-[#262626]">
+                <h3 className="font-bold text-white mb-4">Médias</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Curtidas/Post</span>
-                    <span className="font-bold">{stats.totalSpotteds > 0 ? Math.round(stats.totalLikes / stats.totalSpotteds) : 0}</span>
+                    <span className="font-bold text-white">{stats.totalSpotteds > 0 ? Math.round(stats.totalLikes / stats.totalSpotteds) : 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Comentários/Post</span>
-                    <span className="font-bold">{stats.totalSpotteds > 0 ? Math.round(stats.totalComments / stats.totalSpotteds) : 0}</span>
+                    <span className="font-bold text-white">{stats.totalSpotteds > 0 ? Math.round(stats.totalComments / stats.totalSpotteds) : 0}</span>
                   </div>
                 </div>
               </div>
@@ -370,8 +346,8 @@ export default function AdminPage() {
         ) : (
           <div className="space-y-4">
             {displayedSpotteds.length === 0 ? (
-              <div className="bg-white rounded-2xl p-8 text-center">
-                <p className="text-gray-400">
+              <div className="bg-[#171717] rounded-2xl p-8 text-center border border-[#262626]">
+                <p className="text-gray-500">
                   {activeTab === 'reported' ? 'Nenhuma denúncia pendente!' : 'Nenhum spotted encontrado.'}
                 </p>
               </div>
@@ -381,38 +357,38 @@ export default function AdminPage() {
                 return (
                   <div
                     key={spotted.id}
-                    className={`bg-white rounded-2xl border overflow-hidden ${
-                      spotted.status === 'reported' ? 'border-orange-300' : 'border-gray-100'
+                    className={`bg-[#171717] rounded-2xl border overflow-hidden ${
+                      spotted.status === 'reported' ? 'border-orange-500/50' : 'border-[#262626]'
                     }`}
                   >
                     <div className="p-4">
                       {/* Header */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <span className="px-2 py-1 bg-pink-100 text-pink-600 rounded-full text-xs font-bold">
+                          <span className="px-2 py-1 bg-pink-500/20 text-pink-400 rounded-full text-xs font-bold">
                             #{spotted.number}
                           </span>
                           {spotted.status === 'reported' && (
-                            <span className="px-2 py-1 bg-orange-100 text-orange-600 rounded-full text-xs">
+                            <span className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded-full text-xs">
                               {spotted.reports_count} denúncias
                             </span>
                           )}
                         </div>
-                        <span className="text-xs text-gray-400">{formatDate(spotted.created_at)}</span>
+                        <span className="text-xs text-gray-500">{formatDate(spotted.created_at)}</span>
                       </div>
 
                       {/* Mensagem */}
-                      <p className="text-gray-700 whitespace-pre-wrap mb-3">{spotted.message}</p>
+                      <p className="text-gray-300 whitespace-pre-wrap mb-3">{spotted.message}</p>
 
                       {/* Info adicional */}
-                      <div className="flex flex-wrap gap-2 text-xs text-gray-400">
+                      <div className="flex flex-wrap gap-2 text-xs text-gray-500">
                         <span>{spotted.likes} curtidas</span>
                         <span>•</span>
                         <span>IP: {spotted.author_ip || 'não registrado'}</span>
                         {toxicCheck.contem && (
                           <>
                             <span>•</span>
-                            <span className="text-orange-500">
+                            <span className="text-orange-400">
                               Termos: {toxicCheck.categorias.join(', ')}
                             </span>
                           </>
@@ -420,7 +396,7 @@ export default function AdminPage() {
                       </div>
 
                       {/* Ações */}
-                      <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+                      <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[#262626]">
                         {spotted.status === 'reported' && (
                           <>
                             <button

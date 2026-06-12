@@ -1,23 +1,20 @@
-'use client'
-
-import { useEffect } from 'react'
 import SpottedForm from '@/components/SpottedForm'
 import SpottedList from '@/components/SpottedList'
 import { trackPageView } from '@/lib/supabase'
+import { useEffect } from 'react'
 
 export default function Home() {
   useEffect(() => {
-    // Registra visualização da página
     trackPageView('home')
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-pink-50">
+    <div className="min-h-screen bg-[#0a0a0a]">
       {/* Background decorativo */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-pink-200 to-orange-100 rounded-full blur-3xl opacity-50" />
-        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-gradient-to-br from-purple-200 to-pink-100 rounded-full blur-3xl opacity-40" />
-        <div className="absolute -bottom-40 right-1/3 w-80 h-80 bg-gradient-to-br from-orange-200 to-yellow-100 rounded-full blur-3xl opacity-30" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-pink-500/20 to-orange-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-gradient-to-br from-purple-500/15 to-pink-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 right-1/3 w-80 h-80 bg-gradient-to-br from-orange-500/10 to-yellow-500/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative container mx-auto px-4 py-8 md:py-12">
@@ -30,7 +27,7 @@ export default function Home() {
             </svg>
           </div>
 
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-2">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-2">
             Spotted{' '}
             <span className="bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 bg-clip-text text-transparent">
               2.0
@@ -38,23 +35,23 @@ export default function Home() {
           </h1>
           
           {/* Tagline */}
-          <p className="text-lg md:text-xl text-pink-500 font-medium italic mb-4">
+          <p className="text-lg md:text-xl text-pink-400 font-medium italic mb-4">
             "Because true love never dies"
           </p>
           
-          <p className="text-gray-500 max-w-md mx-auto">
+          <p className="text-gray-400 max-w-md mx-auto">
             Envie mensagens de forma anônima e segura
           </p>
 
           {/* Tags */}
           <div className="flex flex-wrap justify-center gap-2 mt-6">
-            <span className="px-3 py-1.5 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full text-xs font-medium text-gray-500 shadow-sm">
+            <span className="px-3 py-1.5 bg-[#171717] border border-[#262626] rounded-full text-xs font-medium text-gray-400">
               100% Anônimo
             </span>
-            <span className="px-3 py-1.5 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full text-xs font-medium text-gray-500 shadow-sm">
+            <span className="px-3 py-1.5 bg-[#171717] border border-[#262626] rounded-full text-xs font-medium text-gray-400">
               Moderação Comunitária
             </span>
-            <span className="px-3 py-1.5 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full text-xs font-medium text-gray-500 shadow-sm">
+            <span className="px-3 py-1.5 bg-[#171717] border border-[#262626] rounded-full text-xs font-medium text-gray-400">
               Livre de Toxicidade
             </span>
           </div>
@@ -64,16 +61,16 @@ export default function Home() {
         <main className="flex flex-col items-center gap-12 md:gap-16">
           {/* Formulário */}
           <section className="w-full max-w-xl">
-            <div className="bg-white/80 backdrop-blur-lg p-6 md:p-8 rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100">
+            <div className="bg-[#171717] border border-[#262626] p-6 md:p-8 rounded-3xl shadow-xl shadow-pink-500/5">
               <SpottedForm />
             </div>
           </section>
 
           {/* Divisor */}
           <div className="flex items-center gap-4 w-full max-w-xl">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-            <span className="text-gray-400 text-sm">spotteds públicos</span>
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#262626] to-transparent" />
+            <span className="text-gray-500 text-sm">spotteds públicos</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#262626] to-transparent" />
           </div>
 
           {/* Lista */}
@@ -83,8 +80,8 @@ export default function Home() {
         </main>
 
         {/* Footer */}
-        <footer className="text-center mt-16 md:mt-24 py-8 border-t border-gray-100">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-sm text-gray-400">
+        <footer className="text-center mt-16 md:mt-24 py-8 border-t border-[#262626]">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-sm text-gray-500">
             <p>Posts são publicados automaticamente.</p>
             <span className="hidden md:inline">•</span>
             <p>Conteúdo ofensivo pode ser denunciado.</p>
@@ -92,14 +89,14 @@ export default function Home() {
           <div className="mt-4 flex items-center justify-center gap-4">
             <a 
               href="/admin" 
-              className="text-xs text-gray-300 hover:text-gray-500 transition-colors"
+              className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
             >
               Painel Admin
             </a>
-            <span className="text-gray-200">•</span>
+            <span className="text-gray-700">•</span>
             <a 
               href="/stats" 
-              className="text-xs text-gray-300 hover:text-gray-500 transition-colors"
+              className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
             >
               Estatísticas
             </a>
