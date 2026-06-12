@@ -14,9 +14,9 @@ export default function Home() {
     <div className="min-h-screen bg-background transition-colors duration-300">
       {/* Background decorativo */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-pink-500/20 to-orange-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-gradient-to-br from-purple-500/15 to-pink-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 right-1/3 w-80 h-80 bg-gradient-to-br from-orange-500/10 to-yellow-500/5 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-pink-500/10 to-orange-500/5 dark:from-pink-500/20 dark:to-orange-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-gradient-to-br from-purple-500/10 to-pink-500/5 dark:from-purple-500/15 dark:to-pink-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 right-1/3 w-80 h-80 bg-gradient-to-br from-orange-500/5 to-yellow-500/5 dark:from-orange-500/10 dark:to-yellow-500/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative container mx-auto px-4 py-8 md:py-12">
