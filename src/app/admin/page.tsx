@@ -23,26 +23,50 @@ export default function AdminPage() {
   })
 
   useEffect(() => {
-    const isAuth = sessionStorage.getItem('admin_auth')
-    if (isAuth === 'true' && supabase) {
-      setAuthenticated(true)
-      fetchData()
+    const token = sessionStorage.getItem('admin_token')
+    if (token && supabase) {
+      // Verifica se o token ainda é válido
+      fetch('/api/admin/auth', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.authenticated) {
+            setAuthenticated(true)
+            fetchData()
+          } else {
+            sessionStorage.removeItem('admin_token')
+            setLoading(false)
+          }
+        })
+        .catch(() => setLoading(false))
     } else {
       setLoading(false)
     }
   }, [])
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123'
+    setAuthError('')
     
-    if (password === adminPassword) {
-      sessionStorage.setItem('admin_auth', 'true')
-      setAuthenticated(true)
-      fetchData()
-      setAuthError('')
-    } else {
-      setAuthError('Senha incorreta')
+    try {
+      const response = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success && data.token) {
+        sessionStorage.setItem('admin_token', data.token)
+        setAuthenticated(true)
+        fetchData()
+      } else {
+        setAuthError('Senha incorreta')
+      }
+    } catch {
+      setAuthError('Erro ao autenticar')
     }
   }
 

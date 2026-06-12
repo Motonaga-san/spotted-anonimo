@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify'
+
 // Lista de palavras proibidas organizadas por categoria
 export const PALAVRAS_PROIBIDAS = {
   // Racismo
@@ -121,11 +123,26 @@ export function censurarTexto(texto: string): string {
   return textoCensurado
 }
 
-// Formata texto com markdown básico
+// Formata texto com markdown básico e sanitiza para prevenir XSS
 export function formatTextHtml(text: string): string {
-  return text
+  // Primeiro converte markdown para HTML
+  const html = text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/_(.+?)_/g, '<em>$1</em>')
     .replace(/\n/g, '<br />')
+  
+  // Sanitiza o HTML para remover scripts e tags perigosas
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['strong', 'em', 'br', 'p'],
+    ALLOWED_ATTR: []
+  })
+}
+
+// Sanitiza HTML já formatado (para conteúdo vindo do banco)
+export function sanitizeHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['strong', 'em', 'br', 'p'],
+    ALLOWED_ATTR: []
+  })
 }

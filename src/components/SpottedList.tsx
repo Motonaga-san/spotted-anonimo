@@ -2,7 +2,7 @@
   
 import { useEffect, useState, useCallback } from 'react'
 import { supabase, Spotted, Comment, generateFingerprint, getVisitorInfo, trackLike, trackCommentCreated, trackReport, trackClick, trackEvent } from '@/lib/supabase'
-import { formatTextHtml } from '@/lib/moderacao'
+import { formatTextHtml, sanitizeHtml } from '@/lib/moderacao'
 import { REPORT_REASONS } from '@/lib/moderacao'
  
 export default function SpottedList() {
@@ -84,52 +84,59 @@ export default function SpottedList() {
   }, [])
 
   const handleLike = useCallback(async (id: string) => {
-    if (!supabase || likedSpotteds.includes(id)) return
+    if (likedSpotteds.includes(id)) return
     
-    const spotted = spotteds.find(s => s.id === id)
-    const newLikes = (spotted?.likes || 0) + 1
-
-    const { error } = await supabase
-      .from('spotteds')
-      .update({ likes: newLikes })
-      .eq('id', id)
-
-    if (!error) {
-      setSpotteds(spotteds.map(s => s.id === id ? { ...s, likes: newLikes } : s))
-      const newLiked = [...likedSpotteds, id]
-      setLikedSpotteds(newLiked)
-      localStorage.setItem('liked_spotteds', JSON.stringify(newLiked))
-      // Track do like
-      trackLike('spotted', id)
+    try {
+      const response = await fetch('/api/likes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'spotted', id })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setSpotteds(spotteds.map(s => s.id === id ? { ...s, likes: data.likes } : s))
+        const newLiked = [...likedSpotteds, id]
+        setLikedSpotteds(newLiked)
+        localStorage.setItem('liked_spotteds', JSON.stringify(newLiked))
+        // Track do like
+        trackLike('spotted', id)
+      }
+    } catch (error) {
+      console.error('Erro ao dar like:', error)
     }
-  }, [supabase, likedSpotteds, spotteds])
+  }, [likedSpotteds, spotteds])
 
   const handleLikeComment = useCallback(async (spottedId: string, commentId: string) => {
-    if (!supabase || likedComments.includes(commentId)) return
+    if (likedComments.includes(commentId)) return
     
-    const commentList = comments[spottedId]
-    const comment = commentList?.find(c => c.id === commentId)
-    const newLikes = (comment?.likes || 0) + 1
-
-    const { error } = await supabase
-      .from('comments')
-      .update({ likes: newLikes })
-      .eq('id', commentId)
-
-    if (!error) {
-      setComments(prev => ({
-        ...prev,
-        [spottedId]: prev[spottedId]?.map(c => 
-          c.id === commentId ? { ...c, likes: newLikes } : c
-        ) || []
-      }))
-      const newLiked = [...likedComments, commentId]
-      setLikedComments(newLiked)
-      localStorage.setItem('liked_comments', JSON.stringify(newLiked))
-      // Track do like
-      trackLike('comment', commentId)
+    try {
+      const response = await fetch('/api/likes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'comment', id: commentId })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setComments(prev => ({
+          ...prev,
+          [spottedId]: prev[spottedId]?.map(c => 
+            c.id === commentId ? { ...c, likes: data.likes } : c
+          ) || []
+        }))
+        const newLiked = [...likedComments, commentId]
+        setLikedComments(newLiked)
+        localStorage.setItem('liked_comments', JSON.stringify(newLiked))
+        // Track do like
+        trackLike('comment', commentId)
+      }
+    } catch (error) {
+      console.error('Erro ao dar like:', error)
     }
-  }, [supabase, likedComments, comments])
+  }, [likedComments, comments])
 
   const toggleComments = useCallback((id: string) => {
     if (openComments.includes(id)) {
@@ -351,7 +358,7 @@ export default function SpottedList() {
                 <div className="flex-1 min-w-0">
                   <p 
                     className="text-primary break-words leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: spotted.message_html || spotted.message }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(spotted.message_html || spotted.message) }}
                   />
                 </div>
               </div>
@@ -428,7 +435,7 @@ export default function SpottedList() {
                         </svg>
                       </div>
                       <div className="flex-1 bg-input rounded-lg p-2">
-                        <p className="text-sm text-primary" dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }} />
+                        <p className="text-sm text-primary" dangerouslySetInnerHTML={{ __html: sanitizeHtml(comment.content_html || comment.content) }} />
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-xs text-muted">{formatDate(comment.created_at)}</span>
                           <div className="flex items-center gap-2">
