@@ -14,4 +14,6 @@ export interface Spotted {
   message: string
   created_at: string
   status: 'pending' | 'approved' | 'rejected'
+  likes: number
+  reports?: number
 }

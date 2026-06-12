@@ -1,22 +1,38 @@
--- Tabela de Spotteds
-CREATE TABLE spotteds (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  message TEXT NOT NULL CHECK (char_length(message) >= 10 AND char_length(message) <= 500),
-  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- Adiciona coluna de likes se não existir
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'spotteds' AND column_name = 'likes'
+  ) THEN
+    ALTER TABLE spotteds ADD COLUMN likes INTEGER DEFAULT 0;
+  END IF;
+END $$;
 
--- Índice para consultas por status
-CREATE INDEX idx_spotteds_status ON spotteds(status);
-CREATE INDEX idx_spotteds_created_at ON spotteds(created_at DESC);
+-- Adiciona coluna de reports se não existir
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'spotteds' AND column_name = 'reports'
+  ) THEN
+    ALTER TABLE spotteds ADD COLUMN reports INTEGER DEFAULT 0;
+  END IF;
+END $$;
 
--- Políticas RLS (Row Level Security)
-ALTER TABLE spotteds ENABLE ROW LEVEL SECURITY;
+-- Atualiza políticas para permitir updates (para likes)
+DROP POLICY IF EXISTS "Allow all insert" ON spotteds;
+DROP POLICY IF EXISTS "Allow all select" ON spotteds;
+DROP POLICY IF EXISTS "Allow all update" ON spotteds;
+DROP POLICY IF EXISTS "Allow all delete" ON spotteds;
 
--- Qualquer um pode inserir (spotted anônimo)
-CREATE POLICY "Anyone can insert" ON spotteds
-  FOR INSERT WITH CHECK (status = 'pending');
+-- Novas políticas
+CREATE POLICY "Allow all insert" ON spotteds
+  FOR INSERT WITH CHECK (true);
 
--- Qualquer um pode ver apenas aprovados
-CREATE POLICY "Anyone can view approved" ON spotteds
-  FOR SELECT USING (status = 'approved');
+CREATE POLICY "Allow all select" ON spotteds
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow update likes" ON spotteds
+  FOR UPDATE USING (true)
+  WITH CHECK (true);
