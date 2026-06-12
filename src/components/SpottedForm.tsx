@@ -13,12 +13,9 @@ export default function SpottedForm() {
     e.preventDefault()
     
     if (!supabase) {
-      console.error('Supabase não inicializado. Verifique as variáveis de ambiente.')
-      setError('Erro de conexão com o banco de dados - Supabase não configurado')
+      setError('Erro de conexão com o banco de dados')
       return
     }
-    
-    console.log('Supabase conectado, tentando enviar...')
     
     setLoading(true)
     setError('')
@@ -34,7 +31,7 @@ export default function SpottedForm() {
       .insert([{ message, status: 'pending' }])
 
     if (submitError) {
-      setError(`Erro ao enviar: ${submitError.message}`)
+      setError('Erro ao enviar. Tente novamente.')
       setLoading(false)
       return
     }
