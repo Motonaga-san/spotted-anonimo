@@ -8,11 +8,15 @@ export default function SpottedList() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchSpotteds()
+    if (supabase) {
+      fetchSpotteds()
+    } else {
+      setLoading(false)
+    }
   }, [])
 
   const fetchSpotteds = async () => {
-    const { data } = await supabase
+    const { data } = await supabase!
       .from('spotteds')
       .select('*')
       .eq('status', 'approved')

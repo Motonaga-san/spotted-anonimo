@@ -11,6 +11,12 @@ export default function SpottedForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!supabase) {
+      setError('Erro de conexão com o banco de dados')
+      return
+    }
+    
     setLoading(true)
     setError('')
 

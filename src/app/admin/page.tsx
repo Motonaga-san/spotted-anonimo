@@ -13,9 +13,11 @@ export default function AdminPage() {
   useEffect(() => {
     // Verifica se já está autenticado (session storage)
     const isAuth = sessionStorage.getItem('admin_auth')
-    if (isAuth === 'true') {
+    if (isAuth === 'true' && supabase) {
       setAuthenticated(true)
       fetchSpotteds()
+    } else {
+      setLoading(false)
     }
   }, [])
 
@@ -26,7 +28,7 @@ export default function AdminPage() {
     if (password === adminPassword) {
       sessionStorage.setItem('admin_auth', 'true')
       setAuthenticated(true)
-      fetchSpotteds()
+      if (supabase) fetchSpotteds()
       setAuthError('')
     } else {
       setAuthError('Senha incorreta')
@@ -34,6 +36,8 @@ export default function AdminPage() {
   }
 
   const fetchSpotteds = async () => {
+    if (!supabase) return
+    
     const { data } = await supabase
       .from('spotteds')
       .select('*')
@@ -45,6 +49,8 @@ export default function AdminPage() {
   }
 
   const updateStatus = async (id: string, status: 'approved' | 'rejected') => {
+    if (!supabase) return
+    
     const { error } = await supabase
       .from('spotteds')
       .update({ status })
@@ -58,7 +64,7 @@ export default function AdminPage() {
   }
 
   const deleteSpotted = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir?')) return
+    if (!supabase || !confirm('Tem certeza que deseja excluir?')) return
     
     const { error } = await supabase
       .from('spotteds')
