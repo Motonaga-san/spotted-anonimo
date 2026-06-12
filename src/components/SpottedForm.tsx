@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { supabase, generateFingerprint, formatTextHtml } from '@/lib/supabase'
-import { contemPalavraProibida, formatTextHtml as formatHtml } from '@/lib/moderacao'
+import { supabase, generateFingerprint } from '@/lib/supabase'
+import { contemPalavraProibida, formatTextHtml } from '@/lib/moderacao'
 
 interface SpottedFormProps {
   onSpottedEnviado?: () => void
@@ -73,7 +73,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
     }
 
     const fingerprint = generateFingerprint()
-    const messageHtml = formatHtml(message)
+    const messageHtml = formatTextHtml(message)
 
     // Posts são aprovados automaticamente, denúncias vão para moderação
     const { error: submitError } = await supabase
@@ -230,7 +230,7 @@ Dica: Use **texto** para negrito e *texto* para itálico"
               </button>
             </div>
             <div className="p-4 bg-white rounded-lg shadow-sm">
-              <p className="text-gray-700 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatHtml(message) }} />
+              <p className="text-gray-700 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatTextHtml(message) }} />
             </div>
           </div>
         )}
