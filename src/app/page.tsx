@@ -21,10 +21,8 @@ export default function Home() {
       </div>
 
       <div className="relative container mx-auto px-4 py-8 md:py-12">
-        {/* Theme Toggle */}
-        <div className="flex justify-end mb-4">
-          <ThemeToggle />
-        </div>
+        {/* Theme Toggle - fixed position */}
+        <ThemeToggle />
 
         {/* Header */}
         <header className="text-center mb-12 md:mb-16">
