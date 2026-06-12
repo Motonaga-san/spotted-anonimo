@@ -65,3 +65,56 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({ success: true })
 }
+
+export async function POST(request: NextRequest) {
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+
+  const body = await request.json()
+  const { action } = body
+
+  if (action === 'reset-counter') {
+    // Deletar todos os spotteds
+    const { error: deleteSpottedsError } = await supabase
+      .from('spotteds')
+      .delete()
+      .not('id', 'is', null)
+
+    if (deleteSpottedsError) {
+      return NextResponse.json({ error: deleteSpottedsError.message }, { status: 500 })
+    }
+
+    // Deletar todos os comentários
+    await supabase
+      .from('comments')
+      .delete()
+      .not('id', 'is', null)
+
+    // Deletar todos os reports
+    await supabase
+      .from('reports')
+      .delete()
+      .not('id', 'is', null)
+
+    // Resetar a sequência via SQL
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/reset_spotteds_counter`, {
+      method: 'POST',
+      headers: {
+        'apikey': serviceRoleKey,
+        'Authorization': `Bearer ${serviceRoleKey}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Todos os spotteds foram excluídos! Para resetar o contador, execute este SQL no Supabase SQL Editor: ALTER SEQUENCE spotteds_number_seq RESTART WITH 1;'
+    })
+  }
+
+  return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+}

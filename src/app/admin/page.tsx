@@ -155,6 +155,26 @@ export default function AdminPage() {
     fetchData()
   }
 
+  const resetCounter = async () => {
+    if (!confirm('Tem certeza que deseja excluir TODOS os spotteds e reiniciar o contador? Esta ação é irreversível!')) return
+
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reset-counter' })
+    })
+
+    if (!res.ok) {
+      const data = await res.json()
+      alert('Erro: ' + data.error)
+      return
+    }
+
+    const data = await res.json()
+    alert(data.message)
+    fetchData()
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR')
   }
@@ -287,6 +307,12 @@ export default function AdminPage() {
               )}
             </button>
           ))}
+          <button
+            onClick={resetCounter}
+            className="ml-auto px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-all bg-red-600 hover:bg-red-700 text-white"
+          >
+            Reiniciar Contador
+          </button>
         </div>
 
         {/* Conteúdo das Tabs */}
