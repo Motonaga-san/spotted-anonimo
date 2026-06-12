@@ -9,18 +9,22 @@ export default function SpottedList() {
   const [spotteds, setSpotteds] = useState<Spotted[]>([])
   const [loading, setLoading] = useState(true)
   const [likedSpotteds, setLikedSpotteds] = useState<string[]>([])
-  const [openComments, setOpenComments] = useState<string[]>([])
+  const [likedComments, setLikedComments] = useState<string[]>([])
+  const [openComments, setOpenComments] = useState<string[]>([]) // Começa vazio, será preenchido após fetch
   const [comments, setComments] = useState<Record<string, Comment[]>>({})
   const [newComment, setNewComment] = useState<Record<string, string>>({})
   const [reportingSpotted, setReportingSpotted] = useState<string | null>(null)
+  const [reportingComment, setReportingComment] = useState<{ spottedId: string, commentId: string } | null>(null)
   const [reportReason, setReportReason] = useState('')
   const [reportSuccess, setReportSuccess] = useState(false)
 
   useEffect(() => {
     if (supabase) {
       fetchSpotteds()
-      const saved = localStorage.getItem('liked_spotteds')
-      if (saved) setLikedSpotteds(JSON.parse(saved))
+      const savedSpotteds = localStorage.getItem('liked_spotteds')
+      if (savedSpotteds) setLikedSpotteds(JSON.parse(savedSpotteds))
+      const savedComments = localStorage.getItem('liked_comments')
+      if (savedComments) setLikedComments(JSON.parse(savedComments))
     } else {
       setLoading(false)
     }
@@ -34,7 +38,16 @@ export default function SpottedList() {
       .order('created_at', { ascending: false })
       .limit(50)
 
-    if (data) setSpotteds(data as Spotted[])
+    if (data) {
+      setSpotteds(data as Spotted[])
+      // Carregar comentários de todos os spotteds automaticamente
+      const allIds = data.map(s => s.id)
+      setOpenComments(allIds) // Comentários expandidos por padrão
+      // Buscar comentários de todos
+      for (const spotted of data) {
+        fetchComments(spotted.id)
+      }
+    }
     setLoading(false)
   }
 
@@ -72,12 +85,39 @@ export default function SpottedList() {
     }
   }
 
+  const handleLikeComment = async (spottedId: string, commentId: string) => {
+    if (!supabase || likedComments.includes(commentId)) return
+    
+    const commentList = comments[spottedId]
+    const comment = commentList?.find(c => c.id === commentId)
+    const newLikes = (comment?.likes || 0) + 1
+
+    const { error } = await supabase
+      .from('comments')
+      .update({ likes: newLikes })
+      .eq('id', commentId)
+
+    if (!error) {
+      setComments(prev => ({
+        ...prev,
+        [spottedId]: prev[spottedId]?.map(c => 
+          c.id === commentId ? { ...c, likes: newLikes } : c
+        ) || []
+      }))
+      const newLiked = [...likedComments, commentId]
+      setLikedComments(newLiked)
+      localStorage.setItem('liked_comments', JSON.stringify(newLiked))
+    }
+  }
+
   const toggleComments = (id: string) => {
     if (openComments.includes(id)) {
       setOpenComments(openComments.filter(c => c !== id))
     } else {
       setOpenComments([...openComments, id])
-      fetchComments(id)
+      if (!comments[id]) {
+        fetchComments(id)
+      }
     }
   }
 
@@ -155,6 +195,45 @@ export default function SpottedList() {
 
     setTimeout(() => setReportSuccess(false), 3000)
     fetchSpotteds()
+  }
+
+  const handleReportComment = async (spottedId: string, commentId: string) => {
+    if (!supabase || !reportReason.trim()) return
+
+    const fingerprint = generateFingerprint()
+
+    const { error: reportError } = await supabase
+      .from('reports')
+      .insert([{
+        spotted_id: spottedId,
+        comment_id: commentId,
+        reason: reportReason,
+        reporter_fingerprint: fingerprint,
+        status: 'pending',
+      }])
+
+    if (reportError) {
+      console.error('Erro ao denunciar comentário:', reportError)
+      return
+    }
+
+    // Atualizar status do comentário para reported
+    await supabase
+      .from('comments')
+      .update({ status: 'reported' })
+      .eq('id', commentId)
+
+    setReportingComment(null)
+    setReportReason('')
+    setReportSuccess(true)
+    
+    // Remover comentário da lista local
+    setComments(prev => ({
+      ...prev,
+      [spottedId]: prev[spottedId]?.filter(c => c.id !== commentId) || []
+    }))
+
+    setTimeout(() => setReportSuccess(false), 3000)
   }
 
   const formatDate = (dateString: string) => {
@@ -318,63 +397,95 @@ export default function SpottedList() {
                 </div>
               </div>
 
-              {/* Seção de comentários */}
-              {openComments.includes(spotted.id) && (
-                <div className="mt-4 pt-4 border-t border-[#262626] space-y-3 animate-fade-in">
-                  {/* Lista de comentários */}
-                  {comments[spotted.id]?.map((comment) => (
-                    <div key={comment.id} className="flex gap-2 items-start">
-                      <div className="w-6 h-6 rounded-full bg-[#262626] flex items-center justify-center flex-shrink-0">
-                        <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 bg-[#262626] rounded-lg p-2">
-                        <p className="text-sm text-gray-300" dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }} />
-                        <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Input para novo comentário */}
-                  <div className="flex gap-2 items-start mt-3">
-                    <div className="w-6 h-6 rounded-full bg-pink-500/20 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-3 h-3 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {/* Seção de comentários - SEMPRE EXPANDIDA */}
+              <div className="mt-4 pt-4 border-t border-[#262626] space-y-3">
+                {/* Lista de comentários */}
+                {comments[spotted.id]?.map((comment) => (
+                  <div key={comment.id} className="flex gap-2 items-start group/comment">
+                    <div className="w-6 h-6 rounded-full bg-[#262626] flex items-center justify-center flex-shrink-0">
+                      <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                     </div>
-                    <input
-                      type="text"
-                      value={newComment[spotted.id] || ''}
-                      onChange={(e) => setNewComment(prev => ({ ...prev, [spotted.id]: e.target.value }))}
-                      placeholder="Escreva um comentário..."
-                      className="flex-1 p-2 bg-[#262626] border border-[#404040] rounded-lg text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
-                      maxLength={500}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault()
-                          handleAddComment(spotted.id)
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={() => handleAddComment(spotted.id)}
-                      disabled={!newComment[spotted.id]?.trim()}
-                      className="p-2 bg-pink-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-pink-600 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
-                    </button>
+                    <div className="flex-1 bg-[#262626] rounded-lg p-2">
+                      <p className="text-sm text-gray-300" dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }} />
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
+                        <div className="flex items-center gap-2">
+                          {/* Curtir comentário */}
+                          <button
+                            onClick={() => handleLikeComment(spotted.id, comment.id)}
+                            disabled={likedComments.includes(comment.id)}
+                            className={`flex items-center gap-1 text-xs transition-all ${
+                              likedComments.includes(comment.id)
+                                ? 'text-red-400'
+                                : 'text-gray-500 hover:text-red-400'
+                            }`}
+                            title="Curtir comentário"
+                          >
+                            <svg className={`w-3 h-3 ${likedComments.includes(comment.id) ? 'fill-current' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                            </svg>
+                            <span>{comment.likes || 0}</span>
+                          </button>
+                          {/* Denunciar comentário */}
+                          <button
+                            onClick={() => setReportingComment({ spottedId: spotted.id, commentId: comment.id })}
+                            className="text-xs text-gray-500 hover:text-orange-400 transition-colors"
+                            title="Denunciar comentário"
+                          >
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                ))}
+                
+                {comments[spotted.id]?.length === 0 && (
+                  <p className="text-xs text-gray-500 text-center py-2">Nenhum comentário ainda</p>
+                )}
+
+                {/* Input para novo comentário */}
+                <div className="flex gap-2 items-start mt-3">
+                  <div className="w-6 h-6 rounded-full bg-pink-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    value={newComment[spotted.id] || ''}
+                    onChange={(e) => setNewComment(prev => ({ ...prev, [spotted.id]: e.target.value }))}
+                    placeholder="Escreva um comentário..."
+                    className="flex-1 p-2 bg-[#262626] border border-[#404040] rounded-lg text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+                    maxLength={500}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleAddComment(spotted.id)
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => handleAddComment(spotted.id)}
+                    disabled={!newComment[spotted.id]?.trim()}
+                    className="p-2 bg-pink-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-pink-600 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Modal de Denúncia */}
+      {/* Modal de Denúncia de Spotted */}
       {reportingSpotted && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-[#171717] border border-[#262626] rounded-2xl max-w-md w-full p-6 space-y-4 animate-fade-in">
@@ -415,6 +526,57 @@ export default function SpottedList() {
               </button>
               <button
                 onClick={() => handleReport(reportingSpotted)}
+                disabled={!reportReason}
+                className="flex-1 py-3 px-4 bg-orange-500 text-white font-medium rounded-xl hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Denunciar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Denúncia de Comentário */}
+      {reportingComment && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#171717] border border-[#262626] rounded-2xl max-w-md w-full p-6 space-y-4 animate-fade-in">
+            <h3 className="text-xl font-bold text-white">Denunciar Comentário</h3>
+            <p className="text-sm text-gray-400">
+              Ajude-nos a manter a comunidade segura. Denúncias anônimas são revisadas por moderadores.
+            </p>
+            
+            <div className="space-y-2">
+              {REPORT_REASONS.map((reason) => (
+                <label 
+                  key={reason.value}
+                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                    reportReason === reason.value 
+                      ? 'border-pink-500 bg-pink-500/10' 
+                      : 'border-[#262626] hover:border-[#404040]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="reportReasonComment"
+                    value={reason.value}
+                    checked={reportReason === reason.value}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="w-4 h-4 text-pink-500"
+                  />
+                  <span className="text-sm text-gray-300">{reason.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setReportingComment(null); setReportReason(''); }}
+                className="flex-1 py-3 px-4 bg-[#262626] text-gray-400 font-medium rounded-xl hover:bg-[#404040] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleReportComment(reportingComment.spottedId, reportingComment.commentId)}
                 disabled={!reportReason}
                 className="flex-1 py-3 px-4 bg-orange-500 text-white font-medium rounded-xl hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
