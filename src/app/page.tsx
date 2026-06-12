@@ -22,8 +22,6 @@ export default function Home() {
     trackPageView('home')
   }, [])
 
-  const isDark = theme === 'dark'
-
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-[#0a0a0a]' : 'bg-gray-50'}`}>
       {/* Background decorativo */}
