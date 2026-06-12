@@ -109,21 +109,25 @@ export default function AdminPage() {
       .select('*')
       .gte('date', weekAgo)
 
-    const reported = allSpotteds?.filter(s => s.status === 'reported') || []
-
-    // Buscar comentários reportados via API (usa service_role)
+    // Buscar spotteds e comentários reportados via API (usa service_role para bypass RLS)
     const reportedRes = await fetch('/api/admin?action=get-reported')
     const reportedData = await reportedRes.json()
+    const reportedSpottedsData = reportedData.spotteds || []
     const reportedCommentsData = reportedData.comments || []
-    const reportedCommentsCount = reportedCommentsData.length
+    const reportedCount = reportedSpottedsData.length + reportedCommentsData.length
 
-    setSpotteds((allSpotteds as Spotted[]) || [])
+    // Mesclar spotteds: todos do banco + os reportados da API
+    const allSpottedsMerged = [...(allSpotteds || []), ...reportedSpottedsData.filter(
+      (rs: Spotted) => !allSpotteds?.some(s => s.id === rs.id)
+    )] as Spotted[]
+
+    setSpotteds(allSpottedsMerged)
     setReportedComments((reportedCommentsData as Comment[]) || [])
     setStats({
       totalSpotteds: totalSpotteds || 0,
       totalComments: totalComments || 0,
       totalLikes: allSpottedsForLikes?.reduce((sum, s) => sum + (s.likes || 0), 0) || 0,
-      reportedCount: reported.length + reportedCommentsCount,
+      reportedCount: reportedCount,
       todaySpotteds: todaySpotteds || 0,
       todayViews: todayViews || 0,
       weeklyData: (weeklyData as DailyStats[]) || [],
