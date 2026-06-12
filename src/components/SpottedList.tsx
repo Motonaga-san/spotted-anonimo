@@ -241,11 +241,6 @@ export default function SpottedList() {
       return
     }
 
-    await supabase
-      .from('comments')
-      .update({ status: 'reported' })
-      .eq('id', commentId)
-
     // Track da denúncia
     trackReport('comment', commentId, reportReason)
 
@@ -253,6 +248,7 @@ export default function SpottedList() {
     setReportReason('')
     setReportSuccess(true)
     
+    // Remove o comentário da lista local (não altera status no banco - admin decide)
     setComments(prev => ({
       ...prev,
       [spottedId]: prev[spottedId]?.filter(c => c.id !== commentId) || []

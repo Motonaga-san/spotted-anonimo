@@ -15,8 +15,10 @@ ALTER TABLE page_views ADD COLUMN IF NOT EXISTS country TEXT;
 -- 3. Adicionar coluna author_fingerprint em comments
 ALTER TABLE comments ADD COLUMN IF NOT EXISTS author_fingerprint TEXT;
 
--- 4. Adicionar coluna reporter_fingerprint em reports
+-- 4. Adicionar colunas em reports
 ALTER TABLE reports ADD COLUMN IF NOT EXISTS reporter_fingerprint TEXT;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS reporter_ip TEXT;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS comment_id UUID REFERENCES comments(id);
 
 -- 5. Criar tabela de eventos de analytics
 CREATE TABLE IF NOT EXISTS analytics_events (
