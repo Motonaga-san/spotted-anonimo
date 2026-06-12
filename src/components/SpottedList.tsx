@@ -40,13 +40,23 @@ export default function SpottedList() {
 
     if (data) {
       setSpotteds(data as Spotted[])
-      // Carregar comentários de todos os spotteds automaticamente
-      const allIds = data.map(s => s.id)
-      setOpenComments(allIds) // Comentários expandidos por padrão
-      // Buscar comentários de todos
+      // Buscar comentários de todos para contar
+      const commentsData: Record<string, Comment[]> = {}
       for (const spotted of data) {
-        fetchComments(spotted.id)
+        const { data: commentsResult } = await supabase!
+          .from('comments')
+          .select('*')
+          .eq('spotted_id', spotted.id)
+          .eq('status', 'approved')
+          .order('created_at', { ascending: true })
+        
+        if (commentsResult && commentsResult.length > 0) {
+          commentsData[spotted.id] = commentsResult as Comment[]
+          // Expandir automaticamente se tiver comentários
+          setOpenComments(prev => [...prev, spotted.id])
+        }
       }
+      setComments(commentsData)
     }
     setLoading(false)
   }
@@ -397,10 +407,11 @@ export default function SpottedList() {
                 </div>
               </div>
 
-              {/* Seção de comentários - SEMPRE EXPANDIDA */}
-              <div className="mt-4 pt-4 border-t border-[#262626] space-y-3">
-                {/* Lista de comentários */}
-                {comments[spotted.id]?.map((comment) => (
+              {/* Seção de comentários - apenas se expandido */}
+              {openComments.includes(spotted.id) && (
+                <div className="mt-4 pt-4 border-t border-[#262626] space-y-3 animate-fade-in">
+                  {/* Lista de comentários */}
+                  {comments[spotted.id]?.map((comment) => (
                   <div key={comment.id} className="flex gap-2 items-start group/comment">
                     <div className="w-6 h-6 rounded-full bg-[#262626] flex items-center justify-center flex-shrink-0">
                       <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -479,7 +490,7 @@ export default function SpottedList() {
                     </svg>
                   </button>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         ))}
