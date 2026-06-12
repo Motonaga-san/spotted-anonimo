@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase, Spotted, Comment, DailyStats } from '@/lib/supabase'
-import { contemPalavraProibida } from '@/lib/moderacao'
 
 export default function AdminPage() {
   const [spotteds, setSpotteds] = useState<Spotted[]>([])
@@ -25,8 +24,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     const token = sessionStorage.getItem('admin_token')
-    if (token && supabase) {
-      // Verifica se o token ainda é válido
+    if (token) {
       fetch('/api/admin/auth', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -72,62 +70,51 @@ export default function AdminPage() {
   }
 
   const fetchData = async () => {
-    if (!supabase) return
+    setLoading(true)
 
-    const { data: allSpotteds } = await supabase
-      .from('spotteds')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(100)
+    // Buscar spotteds e comentários reportados via API
+    const reportedRes = await fetch('/api/admin?action=get-reported')
+    const reportedData = await reportedRes.json()
+    const reportedSpottedsData = reportedData.spotteds || []
+    const reportedCommentsData = reportedData.comments || []
 
-    const { count: totalSpotteds } = await supabase
+    // Buscar total de spotteds
+    const { count: totalSpotteds } = await supabase!
       .from('spotteds')
       .select('*', { count: 'exact', head: true })
 
-    const { count: totalComments } = await supabase
+    const { count: totalComments } = await supabase!
       .from('comments')
       .select('*', { count: 'exact', head: true })
 
-    const { data: allSpottedsForLikes } = await supabase
+    const { data: allSpottedsForLikes } = await supabase!
       .from('spotteds')
       .select('likes')
 
     const today = new Date().toISOString().split('T')[0]
-    const { count: todaySpotteds } = await supabase
+    const { count: todaySpotteds } = await supabase!
       .from('spotteds')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', today)
 
-    const { count: todayViews } = await supabase
+    const { count: todayViews } = await supabase!
       .from('page_views')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', today)
 
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    const { data: weeklyData } = await supabase
+    const { data: weeklyData } = await supabase!
       .from('daily_stats')
       .select('*')
       .gte('date', weekAgo)
 
-    // Buscar spotteds e comentários reportados via API (usa service_role para bypass RLS)
-    const reportedRes = await fetch('/api/admin?action=get-reported')
-    const reportedData = await reportedRes.json()
-    const reportedSpottedsData = reportedData.spotteds || []
-    const reportedCommentsData = reportedData.comments || []
-    const reportedCount = reportedSpottedsData.length + reportedCommentsData.length
-
-    // Mesclar spotteds: todos do banco + os reportados da API
-    const allSpottedsMerged = [...(allSpotteds || []), ...reportedSpottedsData.filter(
-      (rs: Spotted) => !allSpotteds?.some(s => s.id === rs.id)
-    )] as Spotted[]
-
-    setSpotteds(allSpottedsMerged)
-    setReportedComments((reportedCommentsData as Comment[]) || [])
+    setSpotteds(reportedSpottedsData as Spotted[])
+    setReportedComments(reportedCommentsData as Comment[])
     setStats({
       totalSpotteds: totalSpotteds || 0,
       totalComments: totalComments || 0,
       totalLikes: allSpottedsForLikes?.reduce((sum, s) => sum + (s.likes || 0), 0) || 0,
-      reportedCount: reportedCount,
+      reportedCount: reportedSpottedsData.length + reportedCommentsData.length,
       todaySpotteds: todaySpotteds || 0,
       todayViews: todayViews || 0,
       weeklyData: (weeklyData as DailyStats[]) || [],
@@ -135,129 +122,60 @@ export default function AdminPage() {
     setLoading(false)
   }
 
-  const approveSpotted = async (id: string) => {
-    await fetch('/api/admin', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ table: 'spotteds', id, data: { status: 'approved' } })
-    })
-
-    await fetch('/api/admin', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ table: 'reports', spotted_id: id, data: { status: 'reviewed' } })
-    })
-
-    fetchData()
-  }
-
-  const hideSpotted = async (id: string) => {
-    await fetch('/api/admin', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ table: 'spotteds', id, data: { status: 'hidden' } })
-    })
-
-    fetchData()
-  }
-
-  const deleteSpotted = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir permanentemente?')) return
+  // Ação: Retornar para o público (aprovar)
+  const handleApprove = async (type: 'spotted' | 'comment', id: string) => {
+    const table = type === 'spotted' ? 'spotteds' : 'comments'
     
-    const res = await fetch(`/api/admin?table=spotteds&id=${id}`, {
-      method: 'DELETE'
-    })
-
-    if (!res.ok) {
-      alert('Erro ao excluir spotted')
-      return
-    }
-
-    fetchData()
-  }
-
-  const approveComment = async (id: string) => {
-    await fetch('/api/admin', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ table: 'comments', id, data: { status: 'approved' } })
-    })
-
-    await fetch('/api/admin', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ table: 'reports', comment_id: id, data: { status: 'reviewed' } })
-    })
-
-    fetchData()
-  }
-
-  const deleteComment = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este comentário permanentemente?')) return
-    
-    // Primeiro excluir os reports associados ao comentário
-    await fetch('/api/admin', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ table: 'reports', comment_id: id, data: { status: 'deleted' } })
-    })
-
-    // Depois excluir o comentário
-    const res = await fetch(`/api/admin?table=comments&id=${id}`, {
-      method: 'DELETE'
-    })
-
-    if (!res.ok) {
-      alert('Erro ao excluir comentário')
-      return
-    }
-
-    fetchData()
-  }
-
-  const dismissReports = async (spottedId: string) => {
-    if (!supabase) return
-    
-    await supabase
-      .from('reports')
-      .update({ status: 'dismissed' })
-      .eq('spotted_id', spottedId)
-
-    await supabase
-      .from('spotteds')
-      .update({ status: 'approved' })
-      .eq('id', spottedId)
-
-    fetchData()
-  }
-
-  const resetCounter = async () => {
-    if (!confirm('Tem certeza que deseja excluir TODOS os spotteds e reiniciar o contador? Esta ação é irreversível!')) return
-
     const res = await fetch('/api/admin', {
-      method: 'POST',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'reset-counter' })
+      body: JSON.stringify({ table, id, data: { status: 'approved' } })
     })
 
-    if (!res.ok) {
-      const data = await res.json()
-      alert('Erro: ' + data.error)
-      return
+    if (res.ok) {
+      fetchData()
+    } else {
+      alert('Erro ao aprovar')
     }
+  }
 
-    const data = await res.json()
-    alert(data.message)
-    fetchData()
+  // Ação: Ocultar
+  const handleHide = async (type: 'spotted' | 'comment', id: string) => {
+    const table = type === 'spotted' ? 'spotteds' : 'comments'
+    
+    const res = await fetch('/api/admin', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table, id, data: { status: 'hidden' } })
+    })
+
+    if (res.ok) {
+      fetchData()
+    } else {
+      alert('Erro ao ocultar')
+    }
+  }
+
+  // Ação: Remover (excluir permanentemente)
+  const handleDelete = async (type: 'spotted' | 'comment', id: string) => {
+    if (!confirm('Tem certeza que deseja remover permanentemente?')) return
+    
+    const table = type === 'spotted' ? 'spotteds' : 'comments'
+    
+    const res = await fetch(`/api/admin?table=${table}&id=${id}`, {
+      method: 'DELETE'
+    })
+
+    if (res.ok) {
+      fetchData()
+    } else {
+      alert('Erro ao remover')
+    }
   }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR')
   }
-
-  const displayedSpotteds = activeTab === 'reported' 
-    ? spotteds.filter(s => s.status === 'reported')
-    : spotteds
 
   if (!authenticated) {
     return (
@@ -361,40 +279,36 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 overflow-x-auto">
-          {[
-            { id: 'reported', label: 'Denúncias', count: stats.reportedCount },
-            { id: 'all', label: 'Todos os Spotteds', count: null },
-            { id: 'stats', label: 'Estatísticas', count: null },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-all ${
-                activeTab === tab.id
-                  ? 'bg-gradient-to-r from-pink-500 to-orange-500 text-white shadow-lg shadow-pink-500/25'
-                  : 'bg-[#171717] text-gray-400 hover:bg-[#262626] border border-[#262626]'
-              }`}
-            >
-              {tab.label}
-              {tab.count !== null && tab.count > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
           <button
-            onClick={resetCounter}
-            className="ml-auto px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-all bg-red-600 hover:bg-red-700 text-white"
+            onClick={() => setActiveTab('reported')}
+            className={`px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-all ${
+              activeTab === 'reported'
+                ? 'bg-gradient-to-r from-pink-500 to-orange-500 text-white shadow-lg shadow-pink-500/25'
+                : 'bg-[#171717] text-gray-400 hover:bg-[#262626] border border-[#262626]'
+            }`}
           >
-            Reiniciar Contador
+            Denúncias
+            {stats.reportedCount > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">
+                {stats.reportedCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-all ${
+              activeTab === 'stats'
+                ? 'bg-gradient-to-r from-pink-500 to-orange-500 text-white shadow-lg shadow-pink-500/25'
+                : 'bg-[#171717] text-gray-400 hover:bg-[#262626] border border-[#262626]'
+            }`}
+          >
+            Estatísticas
           </button>
         </div>
 
-        {/* Conteúdo das Tabs */}
+        {/* Conteúdo */}
         {activeTab === 'stats' ? (
           <div className="space-y-6">
-            {/* Gráfico semanal */}
             <div className="bg-[#171717] rounded-2xl p-6 border border-[#262626]">
               <h3 className="font-bold text-white mb-4">Atividade da Semana</h3>
               <div className="flex items-end gap-2 h-40">
@@ -417,179 +331,119 @@ export default function AdminPage() {
                 )}
               </div>
             </div>
-
-            {/* Resumo */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-[#171717] rounded-2xl p-6 border border-[#262626]">
-                <h3 className="font-bold text-white mb-4">Hoje</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Novos Spotteds</span>
-                    <span className="font-bold text-white">{stats.todaySpotteds}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Visitas</span>
-                    <span className="font-bold text-white">{stats.todayViews}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-[#171717] rounded-2xl p-6 border border-[#262626]">
-                <h3 className="font-bold text-white mb-4">Médias</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Curtidas/Post</span>
-                    <span className="font-bold text-white">{stats.totalSpotteds > 0 ? Math.round(stats.totalLikes / stats.totalSpotteds) : 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Comentários/Post</span>
-                    <span className="font-bold text-white">{stats.totalSpotteds > 0 ? Math.round(stats.totalComments / stats.totalSpotteds) : 0}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Comentários Reportados */}
-            {activeTab === 'reported' && reportedComments.length > 0 && (
-              <>
-                <h3 className="text-lg font-bold text-orange-400 flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                  Comentários Denunciados ({reportedComments.length})
-                </h3>
-                {reportedComments.map((comment) => {
-                  const toxicCheck = contemPalavraProibida(comment.content)
-                  return (
-                    <div
-                      key={comment.id}
-                      className="bg-[#171717] rounded-2xl border border-orange-500/50 overflow-hidden"
-                    >
-                      <div className="p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">
-                            Comentário
-                          </span>
-                          <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
-                        </div>
-                        <p className="text-gray-300 whitespace-pre-wrap mb-3">{comment.content}</p>
-                        <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-3">
-                          <span>{comment.likes} curtidas</span>
-                          {toxicCheck.contem && (
-                            <>
-                              <span>•</span>
-                              <span className="text-orange-400">
-                                Termos: {toxicCheck.categorias.join(', ')}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-2 pt-3 border-t border-[#262626]">
-                          <button
-                            onClick={() => approveComment(comment.id)}
-                            className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600"
-                          >
-                            Aprovar
-                          </button>
-                          <button
-                            onClick={() => deleteComment(comment.id)}
-                            className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600"
-                          >
-                            Excluir
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </>
-            )}
-            
-            {/* Spotteds */}
-            {displayedSpotteds.length === 0 && reportedComments.length === 0 ? (
+            {spotteds.length === 0 && reportedComments.length === 0 ? (
               <div className="bg-[#171717] rounded-2xl p-8 text-center border border-[#262626]">
-                <p className="text-gray-500">
-                  {activeTab === 'reported' ? 'Nenhuma denúncia pendente!' : 'Nenhum spotted encontrado.'}
-                </p>
+                <p className="text-gray-500">Nenhuma denúncia pendente!</p>
               </div>
             ) : (
-              displayedSpotteds.map((spotted) => {
-                const toxicCheck = contemPalavraProibida(spotted.message)
-                return (
-                  <div
-                    key={spotted.id}
-                    className={`bg-[#171717] rounded-2xl border overflow-hidden ${
-                      spotted.status === 'reported' ? 'border-orange-500/50' : 'border-[#262626]'
-                    }`}
-                  >
-                    <div className="p-4">
-                      {/* Header */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-1 bg-pink-500/20 text-pink-400 rounded-full text-xs font-bold">
-                            #{spotted.number}
-                          </span>
-                          {spotted.status === 'reported' && (
-                            <span className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded-full text-xs">
-                              denunciado
+              <>
+                {/* Comentários Reportados */}
+                {reportedComments.length > 0 && (
+                  <>
+                    <h3 className="text-lg font-bold text-orange-400 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      Comentários Denunciados ({reportedComments.length})
+                    </h3>
+                    {reportedComments.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="bg-[#171717] rounded-2xl border border-orange-500/50 overflow-hidden"
+                      >
+                        <div className="p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">
+                              Comentário
                             </span>
-                          )}
+                            <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
+                          </div>
+                          <p className="text-gray-300 whitespace-pre-wrap mb-3">{comment.content}</p>
+                          <div className="text-xs text-gray-500 mb-3">
+                            {comment.likes} curtidas
+                          </div>
+                          {/* Botões simplificados */}
+                          <div className="flex flex-wrap gap-2 pt-3 border-t border-[#262626]">
+                            <button
+                              onClick={() => handleApprove('comment', comment.id)}
+                              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700"
+                            >
+                              Retornar ao público
+                            </button>
+                            <button
+                              onClick={() => handleHide('comment', comment.id)}
+                              className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700"
+                            >
+                              Ocultar
+                            </button>
+                            <button
+                              onClick={() => handleDelete('comment', comment.id)}
+                              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700"
+                            >
+                              Remover
+                            </button>
+                          </div>
                         </div>
-                        <span className="text-xs text-gray-500">{formatDate(spotted.created_at)}</span>
                       </div>
+                    ))}
+                  </>
+                )}
 
-                      {/* Mensagem */}
-                      <p className="text-gray-300 whitespace-pre-wrap mb-3">{spotted.message}</p>
-
-                      {/* Info adicional */}
-                      <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                        <span>{spotted.likes} curtidas</span>
-                        {toxicCheck.contem && (
-                          <>
-                            <span>•</span>
-                            <span className="text-orange-400">
-                              Termos: {toxicCheck.categorias.join(', ')}
+                {/* Spotteds Reportados */}
+                {spotteds.length > 0 && (
+                  <>
+                    <h3 className="text-lg font-bold text-orange-400 flex items-center gap-2 mt-6">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                      </svg>
+                      Spotteds Denunciados ({spotteds.length})
+                    </h3>
+                    {spotteds.map((spotted) => (
+                      <div
+                        key={spotted.id}
+                        className="bg-[#171717] rounded-2xl border border-orange-500/50 overflow-hidden"
+                      >
+                        <div className="p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="px-2 py-1 bg-pink-500/20 text-pink-400 rounded-full text-xs font-bold">
+                              #{spotted.number}
                             </span>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Ações */}
-                      <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[#262626]">
-                        {spotted.status === 'reported' && (
-                          <>
+                            <span className="text-xs text-gray-500">{formatDate(spotted.created_at)}</span>
+                          </div>
+                          <p className="text-gray-300 whitespace-pre-wrap mb-3">{spotted.message}</p>
+                          <div className="text-xs text-gray-500 mb-3">
+                            {spotted.likes} curtidas
+                          </div>
+                          {/* Botões simplificados */}
+                          <div className="flex flex-wrap gap-2 pt-3 border-t border-[#262626]">
                             <button
-                              onClick={() => approveSpotted(spotted.id)}
-                              className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600"
+                              onClick={() => handleApprove('spotted', spotted.id)}
+                              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700"
                             >
-                              Aprovar
+                              Retornar ao público
                             </button>
                             <button
-                              onClick={() => dismissReports(spotted.id)}
-                              className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600"
+                              onClick={() => handleHide('spotted', spotted.id)}
+                              className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700"
                             >
-                              Descartar Denúncias
+                              Ocultar
                             </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => hideSpotted(spotted.id)}
-                          className="px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600"
-                        >
-                          Ocultar
-                        </button>
-                        <button
-                          onClick={() => deleteSpotted(spotted.id)}
-                          className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600"
-                        >
-                          Excluir
-                        </button>
+                            <button
+                              onClick={() => handleDelete('spotted', spotted.id)}
+                              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700"
+                            >
+                              Remover
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )
-              })
+                    ))}
+                  </>
+                )}
+              </>
             )}
           </div>
         )}
