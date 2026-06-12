@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { supabase, Spotted, DailyStats } from '@/lib/supabase'
 import { contemPalavraProibida } from '@/lib/moderacao'
 
@@ -248,12 +249,12 @@ export default function AdminPage() {
                 <p className="text-xs text-gray-500">Spotted 2.0</p>
               </div>
             </div>
-            <a href="/" className="text-sm text-gray-500 hover:text-white flex items-center gap-1">
+            <Link href="/" className="text-sm text-gray-500 hover:text-white flex items-center gap-1">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
               Voltar ao site
-            </a>
+            </Link>
           </div>
         </div>
       </header>

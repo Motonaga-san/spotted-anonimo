@@ -1,7 +1,7 @@
 'use client'
- 
-import { useEffect, useState } from 'react'
-import { supabase, Spotted, Comment, generateFingerprint } from '@/lib/supabase'
+  
+import { useEffect, useState, useCallback } from 'react'
+import { supabase, Spotted, Comment, generateFingerprint, getVisitorInfo, trackLike, trackCommentCreated, trackReport, trackClick, trackEvent } from '@/lib/supabase'
 import { formatTextHtml } from '@/lib/moderacao'
 import { REPORT_REASONS } from '@/lib/moderacao'
  
@@ -30,7 +30,14 @@ export default function SpottedList() {
     }
   }, [])
 
-  const fetchSpotteds = async () => {
+  // Track visualizações de spotteds
+  useEffect(() => {
+    if (spotteds.length > 0) {
+      trackEvent('spotteds_viewed', { count: spotteds.length })
+    }
+  }, [spotteds.length])
+
+  const fetchSpotteds = useCallback(async () => {
     const { data } = await supabase!
       .from('spotteds')
       .select('*')
@@ -59,9 +66,9 @@ export default function SpottedList() {
       setComments(commentsData)
     }
     setLoading(false)
-  }
+  }, [])
 
-  const fetchComments = async (spottedId: string) => {
+  const fetchComments = useCallback(async (spottedId: string) => {
     if (!supabase) return
     
     const { data } = await supabase
@@ -74,9 +81,9 @@ export default function SpottedList() {
     if (data) {
       setComments(prev => ({ ...prev, [spottedId]: data as Comment[] }))
     }
-  }
+  }, [])
 
-  const handleLike = async (id: string) => {
+  const handleLike = useCallback(async (id: string) => {
     if (!supabase || likedSpotteds.includes(id)) return
     
     const spotted = spotteds.find(s => s.id === id)
@@ -92,10 +99,12 @@ export default function SpottedList() {
       const newLiked = [...likedSpotteds, id]
       setLikedSpotteds(newLiked)
       localStorage.setItem('liked_spotteds', JSON.stringify(newLiked))
+      // Track do like
+      trackLike('spotted', id)
     }
-  }
+  }, [supabase, likedSpotteds, spotteds])
 
-  const handleLikeComment = async (spottedId: string, commentId: string) => {
+  const handleLikeComment = useCallback(async (spottedId: string, commentId: string) => {
     if (!supabase || likedComments.includes(commentId)) return
     
     const commentList = comments[spottedId]
@@ -117,27 +126,31 @@ export default function SpottedList() {
       const newLiked = [...likedComments, commentId]
       setLikedComments(newLiked)
       localStorage.setItem('liked_comments', JSON.stringify(newLiked))
+      // Track do like
+      trackLike('comment', commentId)
     }
-  }
+  }, [supabase, likedComments, comments])
 
-  const toggleComments = (id: string) => {
+  const toggleComments = useCallback((id: string) => {
     if (openComments.includes(id)) {
       setOpenComments(openComments.filter(c => c !== id))
     } else {
       setOpenComments([...openComments, id])
+      trackClick('open_comments', { spotted_id: id })
       if (!comments[id]) {
         fetchComments(id)
       }
     }
-  }
+  }, [openComments, comments, fetchComments])
 
-  const handleAddComment = async (spottedId: string) => {
+  const handleAddComment = useCallback(async (spottedId: string) => {
     if (!supabase) return
     
     const content = newComment[spottedId]?.trim()
     if (!content || content.length < 1 || content.length > 500) return
 
     const fingerprint = generateFingerprint()
+    const visitorInfo = await getVisitorInfo()
     const contentHtml = formatTextHtml(content)
 
     const { data, error } = await supabase
@@ -147,8 +160,10 @@ export default function SpottedList() {
         content,
         content_html: contentHtml,
         status: 'approved',
+        author_ip: visitorInfo.ip,
+        author_fingerprint: fingerprint,
       }])
-      .select()
+      .select('id')
 
     if (error) {
       console.error('Erro ao salvar comentário:', error)
@@ -156,19 +171,23 @@ export default function SpottedList() {
       return
     }
 
-    if (data) {
-      console.log('Comentário salvo:', data)
+    if (data && data[0]) {
       setNewComment(prev => ({ ...prev, [spottedId]: '' }))
       fetchComments(spottedId)
+      // Track do comentário
+      trackCommentCreated(spottedId, data[0].id)
       // Adicionar aos comentários abertos se não estiver
       if (!openComments.includes(spottedId)) {
         setOpenComments(prev => [...prev, spottedId])
       }
     }
-  }
+  }, [supabase, newComment, openComments, fetchComments])
 
-  const handleReport = async (spottedId: string) => {
+  const handleReport = useCallback(async (spottedId: string) => {
     if (!supabase || !reportReason.trim()) return
+
+    const fingerprint = generateFingerprint()
+    const visitorInfo = await getVisitorInfo()
 
     const { error: reportError } = await supabase
       .from('reports')
@@ -176,9 +195,14 @@ export default function SpottedList() {
         spotted_id: spottedId,
         reason: reportReason,
         status: 'pending',
+        reporter_ip: visitorInfo.ip,
+        reporter_fingerprint: fingerprint,
       }])
 
     if (reportError) return
+
+    // Track da denúncia
+    trackReport('spotted', spottedId, reportReason)
 
     setReportingSpotted(null)
     setReportReason('')
@@ -186,10 +210,13 @@ export default function SpottedList() {
     
     setTimeout(() => setReportSuccess(false), 3000)
     fetchSpotteds()
-  }
+  }, [supabase, reportReason, fetchSpotteds])
 
-  const handleReportComment = async (spottedId: string, commentId: string) => {
+  const handleReportComment = useCallback(async (spottedId: string, commentId: string) => {
     if (!supabase || !reportReason.trim()) return
+
+    const fingerprint = generateFingerprint()
+    const visitorInfo = await getVisitorInfo()
 
     const { error: reportError } = await supabase
       .from('reports')
@@ -198,6 +225,8 @@ export default function SpottedList() {
         comment_id: commentId,
         reason: reportReason,
         status: 'pending',
+        reporter_ip: visitorInfo.ip,
+        reporter_fingerprint: fingerprint,
       }])
 
     if (reportError) {
@@ -210,6 +239,9 @@ export default function SpottedList() {
       .update({ status: 'reported' })
       .eq('id', commentId)
 
+    // Track da denúncia
+    trackReport('comment', commentId, reportReason)
+
     setReportingComment(null)
     setReportReason('')
     setReportSuccess(true)
@@ -220,7 +252,7 @@ export default function SpottedList() {
     }))
 
     setTimeout(() => setReportSuccess(false), 3000)
-  }
+  }, [supabase, reportReason])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -240,6 +272,7 @@ export default function SpottedList() {
 
   const copyToClipboard = (id: string) => {
     navigator.clipboard.writeText(`${window.location.origin}/spotted/${id}`)
+    trackClick('copy_link', { spotted_id: id })
   }
 
   if (loading) {

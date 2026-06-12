@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { supabase, Spotted, DailyStats } from '@/lib/supabase'
 
 export default function StatsPage() {
@@ -218,9 +219,9 @@ export default function StatsPage() {
 
         {/* Link voltar */}
         <div className="text-center mt-8">
-          <a href="/" className="text-pink-400 hover:text-pink-300 font-medium">
+          <Link href="/" className="text-pink-400 hover:text-pink-300 font-medium">
             ← Voltar ao Spotted
-          </a>
+          </Link>
         </div>
       </main>
     </div>

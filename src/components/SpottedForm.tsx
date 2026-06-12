@@ -1,7 +1,7 @@
 'use client'
- 
-import { useState, useRef, useEffect } from 'react'
-import { supabase, generateFingerprint, getVisitorInfo } from '@/lib/supabase'
+  
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { supabase, generateFingerprint, getVisitorInfo, trackSpottedCreated, trackClick } from '@/lib/supabase'
 import { contemPalavraProibida, formatTextHtml } from '@/lib/moderacao'
  
 interface SpottedFormProps {
@@ -32,9 +32,10 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
     }
   }
 
-  useEffect(() => {
-    if (message.length >= 10) {
-      const resultado = contemPalavraProibida(message)
+  // Callback para verificar palavras proibidas (evita race conditions)
+  const verificarPalavrasProibidas = useCallback((texto: string) => {
+    if (texto.length >= 10) {
+      const resultado = contemPalavraProibida(texto)
       if (resultado.contem) {
         setWarning(`Termos detectados: ${resultado.categorias.join(', ')}. Spotteds ofensivos podem ser removidos.`)
       } else {
@@ -43,7 +44,11 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
     } else {
       setWarning('')
     }
-  }, [message])
+  }, [])
+
+  useEffect(() => {
+    verificarPalavrasProibidas(message)
+  }, [message, verificarPalavrasProibidas])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,23 +74,36 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
       return
     }
 
+    // Coleta informações do visitante para segurança e analytics
     const fingerprint = generateFingerprint()
-    const messageHtml = formatTextHtml(message)
     const visitorInfo = await getVisitorInfo()
+    const messageHtml = formatTextHtml(message)
 
-    const { error: submitError } = await supabase
+    // Track do clique em enviar
+    trackClick('submit_spotted', { message_length: message.length })
+
+    const { data, error: submitError } = await supabase
       .from('spotteds')
       .insert([{ 
         message, 
         message_html: messageHtml,
         status: 'approved',
         likes: 0,
+        author_ip: visitorInfo.ip,
+        author_fingerprint: fingerprint,
       }])
+      .select('id')
+      .single()
 
     if (submitError) {
       setError('Erro ao enviar. Tente novamente.')
       setLoading(false)
       return
+    }
+
+    // Registra evento de criação para analytics
+    if (data?.id) {
+      trackSpottedCreated(data.id)
     }
 
     setSuccess(true)
@@ -120,7 +138,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
         <div className="flex gap-2 p-2 card-theme rounded-xl">
           <button
             type="button"
-            onClick={() => applyFormat('bold')}
+            onClick={() => { applyFormat('bold'); trackClick('format_bold') }}
             className="p-2 hover:bg-input rounded-lg transition-colors text-muted hover:text-primary"
             title="Negrito"
           >
@@ -130,7 +148,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
           </button>
           <button
             type="button"
-            onClick={() => applyFormat('italic')}
+            onClick={() => { applyFormat('italic'); trackClick('format_italic') }}
             className="p-2 hover:bg-input rounded-lg transition-colors text-muted hover:text-primary italic"
             title="Itálico"
           >

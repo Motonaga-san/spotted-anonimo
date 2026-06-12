@@ -1,6 +1,7 @@
 'use client'
-
+ 
 import { useEffect } from 'react'
+import Link from 'next/link'
 import SpottedForm from '@/components/SpottedForm'
 import SpottedList from '@/components/SpottedList'
 import { trackPageView } from '@/lib/supabase'
@@ -89,19 +90,19 @@ export default function Home() {
             <p>Conteúdo ofensivo pode ser denunciado.</p>
           </div>
           <div className="mt-4 flex items-center justify-center gap-4">
-            <a 
+            <Link 
               href="/admin" 
               className="text-xs text-muted hover:text-secondary transition-colors"
             >
               Painel Admin
-            </a>
+            </Link>
             <span className="text-border">•</span>
-            <a 
+            <Link 
               href="/stats" 
               className="text-xs text-muted hover:text-secondary transition-colors"
             >
               Estatísticas
-            </a>
+            </Link>
           </div>
         </footer>
       </div>
