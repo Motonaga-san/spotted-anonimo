@@ -10,7 +10,7 @@ export default function SpottedList() {
   const [loading, setLoading] = useState(true)
   const [likedSpotteds, setLikedSpotteds] = useState<string[]>([])
   const [likedComments, setLikedComments] = useState<string[]>([])
-  const [openComments, setOpenComments] = useState<string[]>([]) // Começa vazio, será preenchido após fetch
+  const [openComments, setOpenComments] = useState<string[]>([])
   const [comments, setComments] = useState<Record<string, Comment[]>>({})
   const [newComment, setNewComment] = useState<Record<string, string>>({})
   const [reportingSpotted, setReportingSpotted] = useState<string | null>(null)
@@ -161,6 +161,10 @@ export default function SpottedList() {
       console.log('Comentário salvo:', data)
       setNewComment(prev => ({ ...prev, [spottedId]: '' }))
       fetchComments(spottedId)
+      // Adicionar aos comentários abertos se não estiver
+      if (!openComments.includes(spottedId)) {
+        setOpenComments(prev => [...prev, spottedId])
+      }
     }
   }
 
@@ -227,7 +231,6 @@ export default function SpottedList() {
       return
     }
 
-    // Atualizar status do comentário para reported
     await supabase
       .from('comments')
       .update({ status: 'reported' })
@@ -237,7 +240,6 @@ export default function SpottedList() {
     setReportReason('')
     setReportSuccess(true)
     
-    // Remover comentário da lista local
     setComments(prev => ({
       ...prev,
       [spottedId]: prev[spottedId]?.filter(c => c.id !== commentId) || []
@@ -412,83 +414,84 @@ export default function SpottedList() {
                 <div className="mt-4 pt-4 border-t border-[#262626] space-y-3 animate-fade-in">
                   {/* Lista de comentários */}
                   {comments[spotted.id]?.map((comment) => (
-                  <div key={comment.id} className="flex gap-2 items-start group/comment">
-                    <div className="w-6 h-6 rounded-full bg-[#262626] flex items-center justify-center flex-shrink-0">
-                      <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 bg-[#262626] rounded-lg p-2">
-                      <p className="text-sm text-gray-300" dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }} />
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
-                        <div className="flex items-center gap-2">
-                          {/* Curtir comentário */}
-                          <button
-                            onClick={() => handleLikeComment(spotted.id, comment.id)}
-                            disabled={likedComments.includes(comment.id)}
-                            className={`flex items-center gap-1 text-xs transition-all ${
-                              likedComments.includes(comment.id)
-                                ? 'text-red-400'
-                                : 'text-gray-500 hover:text-red-400'
-                            }`}
-                            title="Curtir comentário"
-                          >
-                            <svg className={`w-3 h-3 ${likedComments.includes(comment.id) ? 'fill-current' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                            </svg>
-                            <span>{comment.likes || 0}</span>
-                          </button>
-                          {/* Denunciar comentário */}
-                          <button
-                            onClick={() => setReportingComment({ spottedId: spotted.id, commentId: comment.id })}
-                            className="text-xs text-gray-500 hover:text-orange-400 transition-colors"
-                            title="Denunciar comentário"
-                          >
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-                            </svg>
-                          </button>
+                    <div key={comment.id} className="flex gap-2 items-start group/comment">
+                      <div className="w-6 h-6 rounded-full bg-[#262626] flex items-center justify-center flex-shrink-0">
+                        <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 bg-[#262626] rounded-lg p-2">
+                        <p className="text-sm text-gray-300" dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }} />
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
+                          <div className="flex items-center gap-2">
+                            {/* Curtir comentário */}
+                            <button
+                              onClick={() => handleLikeComment(spotted.id, comment.id)}
+                              disabled={likedComments.includes(comment.id)}
+                              className={`flex items-center gap-1 text-xs transition-all ${
+                                likedComments.includes(comment.id)
+                                  ? 'text-red-400'
+                                  : 'text-gray-500 hover:text-red-400'
+                              }`}
+                              title="Curtir comentário"
+                            >
+                              <svg className={`w-3 h-3 ${likedComments.includes(comment.id) ? 'fill-current' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                              </svg>
+                              <span>{comment.likes || 0}</span>
+                            </button>
+                            {/* Denunciar comentário */}
+                            <button
+                              onClick={() => setReportingComment({ spottedId: spotted.id, commentId: comment.id })}
+                              className="text-xs text-gray-500 hover:text-orange-400 transition-colors"
+                              title="Denunciar comentário"
+                            >
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-                
-                {comments[spotted.id]?.length === 0 && (
-                  <p className="text-xs text-gray-500 text-center py-2">Nenhum comentário ainda</p>
-                )}
+                  ))}
+                  
+                  {comments[spotted.id]?.length === 0 && (
+                    <p className="text-xs text-gray-500 text-center py-2">Nenhum comentário ainda</p>
+                  )}
 
-                {/* Input para novo comentário */}
-                <div className="flex gap-2 items-start mt-3">
-                  <div className="w-6 h-6 rounded-full bg-pink-500/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3 h-3 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+                  {/* Input para novo comentário */}
+                  <div className="flex gap-2 items-start mt-3">
+                    <div className="w-6 h-6 rounded-full bg-pink-500/20 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-3 h-3 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      value={newComment[spotted.id] || ''}
+                      onChange={(e) => setNewComment(prev => ({ ...prev, [spotted.id]: e.target.value }))}
+                      placeholder="Escreva um comentário..."
+                      className="flex-1 p-2 bg-[#262626] border border-[#404040] rounded-lg text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+                      maxLength={500}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          handleAddComment(spotted.id)
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => handleAddComment(spotted.id)}
+                      disabled={!newComment[spotted.id]?.trim()}
+                      className="p-2 bg-pink-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-pink-600 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                    </button>
                   </div>
-                  <input
-                    type="text"
-                    value={newComment[spotted.id] || ''}
-                    onChange={(e) => setNewComment(prev => ({ ...prev, [spotted.id]: e.target.value }))}
-                    placeholder="Escreva um comentário..."
-                    className="flex-1 p-2 bg-[#262626] border border-[#404040] rounded-lg text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
-                    maxLength={500}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault()
-                        handleAddComment(spotted.id)
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => handleAddComment(spotted.id)}
-                    disabled={!newComment[spotted.id]?.trim()}
-                    className="p-2 bg-pink-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-pink-600 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                  </button>
                 </div>
               )}
             </div>
