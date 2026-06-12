@@ -36,6 +36,18 @@ export async function GET(request: NextRequest) {
     })
   }
 
+  if (action === 'get-reports') {
+    // Buscar todos os reports com informações do denunciante
+    const { data: reports } = await supabase
+      .from('reports')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    return NextResponse.json({
+      reports: reports || []
+    })
+  }
+
   return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 }
 
