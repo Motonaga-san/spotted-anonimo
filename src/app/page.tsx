@@ -8,7 +8,15 @@ import { trackPageView } from '@/lib/supabase'
 import { useTheme } from '@/context/ThemeContext'
 
 export default function Home() {
-  const { theme } = useTheme ? useTheme() : { theme: 'dark' }
+  // Use try-catch to handle SSR when ThemeProvider is not available
+  let theme = 'dark'
+  try {
+    const context = useTheme()
+    theme = context.theme
+  } catch {
+    // ThemeProvider not available during SSR
+  }
+  const isDark = theme === 'dark'
   
   useEffect(() => {
     trackPageView('home')
