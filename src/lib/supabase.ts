@@ -158,7 +158,7 @@ export async function generateFingerprintAsync(): Promise<{ fingerprint: Record<
     
     // 6. WebGL (GPU)
     const canvas = document.createElement('canvas')
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    const gl = canvas.getContext('webgl') as WebGLRenderingContext | null || canvas.getContext('experimental-webgl') as WebGLRenderingContext | null
     if (gl) {
       fp.glv = gl.getParameter(gl.VENDOR)
       fp.glr = gl.getParameter(gl.RENDERER)
@@ -201,10 +201,11 @@ export async function generateFingerprintAsync(): Promise<{ fingerprint: Record<
     }
     
     // 10. Battery
-    if ((navigator as unknown as Record<string, unknown>).getBattery) {
+    const navWithBattery = navigator as unknown as { getBattery?: () => Promise<{ level: number; charging: boolean }> }
+    if (navWithBattery.getBattery) {
       try {
-        const bat = await ((navigator as unknown as Record<string, { getBattery: () => Promise<Record<string, unknown>> }>).getBattery())()
-        fp.bl = Math.round((bat.level as number) * 100)
+        const bat = await navWithBattery.getBattery()
+        fp.bl = Math.round(bat.level * 100)
         fp.bc = bat.charging
       } catch {}
     }
@@ -273,7 +274,7 @@ export function generateFingerprint(): string {
     navigator.languages?.slice(0, 3).join(','),
     screen.width + 'x' + screen.height,
     screen.colorDepth,
-    screen.devicePixelRatio || 1,
+    window.devicePixelRatio || 1,
     new Date().getTimezoneOffset(),
     Intl.DateTimeFormat().resolvedOptions().timeZone,
     navigator.hardwareConcurrency || 0,
