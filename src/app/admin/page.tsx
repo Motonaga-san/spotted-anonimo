@@ -103,7 +103,7 @@ export default function AdminPage() {
     
     await supabase
       .from('spotteds')
-      .update({ status: 'approved', reports_count: 0 })
+      .update({ status: 'approved' })
       .eq('id', id)
 
     await supabase
@@ -146,7 +146,7 @@ export default function AdminPage() {
 
     await supabase
       .from('spotteds')
-      .update({ status: 'approved', reports_count: 0 })
+      .update({ status: 'approved' })
       .eq('id', spottedId)
 
     fetchData()
@@ -370,7 +370,7 @@ export default function AdminPage() {
                           </span>
                           {spotted.status === 'reported' && (
                             <span className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded-full text-xs">
-                              {spotted.reports_count} denúncias
+                              denunciado
                             </span>
                           )}
                         </div>
@@ -383,8 +383,6 @@ export default function AdminPage() {
                       {/* Info adicional */}
                       <div className="flex flex-wrap gap-2 text-xs text-gray-500">
                         <span>{spotted.likes} curtidas</span>
-                        <span>•</span>
-                        <span>IP: {spotted.author_ip || 'não registrado'}</span>
                         {toxicCheck.contem && (
                           <>
                             <span>•</span>

@@ -80,10 +80,6 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
         message_html: messageHtml,
         status: 'approved',
         likes: 0,
-        views: 0,
-        reports_count: 0,
-        author_fingerprint: fingerprint,
-        author_ip: visitorInfo.ip,
       }])
 
     if (submitError) {

@@ -147,7 +147,6 @@ export default function SpottedList() {
         content,
         content_html: contentHtml,
         status: 'approved',
-        author_fingerprint: fingerprint,
       }])
       .select()
 
@@ -171,42 +170,20 @@ export default function SpottedList() {
   const handleReport = async (spottedId: string) => {
     if (!supabase || !reportReason.trim()) return
 
-    const fingerprint = generateFingerprint()
-
     const { error: reportError } = await supabase
       .from('reports')
       .insert([{
         spotted_id: spottedId,
         reason: reportReason,
-        reporter_fingerprint: fingerprint,
         status: 'pending',
       }])
 
     if (reportError) return
 
-    const spotted = spotteds.find(s => s.id === spottedId)
-    const newReportsCount = (spotted?.reports_count || 0) + 1
-    const newStatus = newReportsCount >= 3 ? 'reported' : 'approved'
-
-    await supabase
-      .from('spotteds')
-      .update({ reports_count: newReportsCount, status: newStatus })
-      .eq('id', spottedId)
-
     setReportingSpotted(null)
     setReportReason('')
     setReportSuccess(true)
     
-    setSpotteds(spotteds.map(s => 
-      s.id === spottedId 
-        ? { ...s, reports_count: newReportsCount, status: newStatus } 
-        : s
-    ))
-
-    if (newStatus === 'reported') {
-      setSpotteds(prev => prev.filter(s => s.id !== spottedId))
-    }
-
     setTimeout(() => setReportSuccess(false), 3000)
     fetchSpotteds()
   }
@@ -214,15 +191,12 @@ export default function SpottedList() {
   const handleReportComment = async (spottedId: string, commentId: string) => {
     if (!supabase || !reportReason.trim()) return
 
-    const fingerprint = generateFingerprint()
-
     const { error: reportError } = await supabase
       .from('reports')
       .insert([{
         spotted_id: spottedId,
         comment_id: commentId,
         reason: reportReason,
-        reporter_fingerprint: fingerprint,
         status: 'pending',
       }])
 

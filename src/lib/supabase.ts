@@ -112,7 +112,6 @@ export async function trackPageView(page: string): Promise<void> {
     visitor_fingerprint: fingerprint,
     user_agent: visitorInfo.userAgent,
     referrer: typeof document !== 'undefined' ? document.referrer || null : null,
-    country: visitorInfo.country,
   }])
 }
 
