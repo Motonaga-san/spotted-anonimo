@@ -99,39 +99,42 @@ export default function AdminPage() {
   }
 
   const approveSpotted = async (id: string) => {
-    if (!supabase) return
-    
-    await supabase
-      .from('spotteds')
-      .update({ status: 'approved' })
-      .eq('id', id)
+    await fetch('/api/admin', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: 'spotteds', id, data: { status: 'approved' } })
+    })
 
-    await supabase
-      .from('reports')
-      .update({ status: 'reviewed' })
-      .eq('spotted_id', id)
+    await fetch('/api/admin', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: 'reports', spotted_id: id, data: { status: 'reviewed' } })
+    })
 
     fetchData()
   }
 
   const hideSpotted = async (id: string) => {
-    if (!supabase) return
-    
-    await supabase
-      .from('spotteds')
-      .update({ status: 'hidden' })
-      .eq('id', id)
+    await fetch('/api/admin', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: 'spotteds', id, data: { status: 'hidden' } })
+    })
 
     fetchData()
   }
 
   const deleteSpotted = async (id: string) => {
-    if (!supabase || !confirm('Tem certeza que deseja excluir permanentemente?')) return
+    if (!confirm('Tem certeza que deseja excluir permanentemente?')) return
     
-    await supabase
-      .from('spotteds')
-      .delete()
-      .eq('id', id)
+    const res = await fetch(`/api/admin?table=spotteds&id=${id}`, {
+      method: 'DELETE'
+    })
+
+    if (!res.ok) {
+      alert('Erro ao excluir spotted')
+      return
+    }
 
     fetchData()
   }
