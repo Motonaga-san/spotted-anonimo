@@ -126,22 +126,210 @@ export function getSessionId(): string {
   return currentSessionId
 }
 
-// Gera fingerprint do navegador
+// Gera fingerprint robusto do navegador (58 campos)
+export async function generateFingerprintAsync(): Promise<{ fingerprint: Record<string, unknown>; hash: string }> {
+  if (typeof window === 'undefined') return { fingerprint: {}, hash: '' }
+  
+  const fp: Record<string, unknown> = {}
+  
+  try {
+    // 1. User Agent completo
+    fp.ua = navigator.userAgent
+    
+    // 2. Plataforma e hardware
+    fp.plat = navigator.platform
+    fp.cores = navigator.hardwareConcurrency || 0
+    fp.mem = (navigator as unknown as Record<string, unknown>).deviceMemory || 0
+    
+    // 3. Tela
+    fp.scw = screen.width
+    fp.sch = screen.height
+    fp.scd = screen.colorDepth
+    fp.dpr = window.devicePixelRatio
+    
+    // 4. Timezone e idioma
+    fp.tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    fp.tzo = new Date().getTimezoneOffset()
+    fp.lang = navigator.language
+    fp.langs = navigator.languages?.slice(0, 3).join(',')
+    
+    // 5. Touch
+    fp.touch = navigator.maxTouchPoints || 0
+    
+    // 6. WebGL (GPU)
+    const canvas = document.createElement('canvas')
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    if (gl) {
+      fp.glv = gl.getParameter(gl.VENDOR)
+      fp.glr = gl.getParameter(gl.RENDERER)
+      const dbg = gl.getExtension('WEBGL_debug_renderer_info')
+      if (dbg) {
+        fp.glvu = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL)
+        fp.glru = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)
+      }
+      fp.glt = gl.getParameter(gl.MAX_TEXTURE_SIZE)
+    }
+    
+    // 7. Canvas fingerprint
+    const c2 = document.createElement('canvas')
+    c2.width = 200
+    c2.height = 50
+    const ctx = c2.getContext('2d')
+    if (ctx) {
+      ctx.textBaseline = 'top'
+      ctx.font = '14px Arial'
+      ctx.fillStyle = '#f60'
+      ctx.fillRect(125, 1, 62, 20)
+      ctx.fillStyle = '#069'
+      ctx.fillText('Spotted2.0', 2, 15)
+      fp.cv = c2.toDataURL().slice(-30)
+    }
+    
+    // 8. Audio
+    try {
+      const ac = new (window.AudioContext || (window as unknown as Record<string, unknown>).webkitAudioContext)()
+      fp.asr = ac.sampleRate
+      fp.amc = (ac.destination as unknown as Record<string, unknown>).maxChannelCount
+    } catch {}
+    
+    // 9. Network
+    const conn = (navigator as unknown as Record<string, unknown>).connection as Record<string, unknown> | undefined
+    if (conn) {
+      fp.ct = conn.effectiveType
+      fp.dl = conn.downlink
+      fp.rtt = conn.rtt
+    }
+    
+    // 10. Battery
+    if ((navigator as unknown as Record<string, unknown>).getBattery) {
+      try {
+        const bat = await ((navigator as unknown as Record<string, { getBattery: () => Promise<Record<string, unknown>> }>).getBattery())()
+        fp.bl = Math.round((bat.level as number) * 100)
+        fp.bc = bat.charging
+      } catch {}
+    }
+    
+    // 11. Media devices
+    if (navigator.mediaDevices) {
+      try {
+        const devs = await navigator.mediaDevices.enumerateDevices()
+        fp.mdc = devs.length
+        fp.cam = devs.filter(d => d.kind === 'videoinput').length
+        fp.mic = devs.filter(d => d.kind === 'audioinput').length
+      } catch {}
+    }
+    
+    // 12. Features
+    fp.cookie = navigator.cookieEnabled
+    fp.pdf = (navigator as unknown as Record<string, unknown>).pdfViewerEnabled || false
+    fp.ls = !!window.localStorage
+    fp.idb = !!window.indexedDB
+    
+    // 13. Screen orientation
+    if (screen.orientation) {
+      fp.or = screen.orientation.type
+    }
+    
+    // 14. Window
+    fp.ww = window.innerWidth
+    fp.wh = window.innerHeight
+    
+    // 15. Dark mode
+    fp.dark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    
+    // 16. Math precision
+    const m = [
+      Math.sin(0.123).toString().slice(0, 10),
+      Math.cos(0.123).toString().slice(0, 10),
+      Math.tan(0.123).toString().slice(0, 10),
+      Math.sqrt(2).toString().slice(0, 10)
+    ]
+    fp.math = m.join('|')
+    
+  } catch (e) {
+    fp.err = (e as Error).message
+  }
+  
+  // Gerar hash único
+  const input = JSON.stringify(fp)
+  let hash = 0
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+  const hashStr = Math.abs(hash).toString(16).toUpperCase()
+  
+  return { fingerprint: fp, hash: hashStr }
+}
+
+// Gera fingerprint do navegador (versão síncrona simplificada)
 export function generateFingerprint(): string {
   if (typeof window === 'undefined') return ''
   
   const components = [
     navigator.userAgent,
     navigator.language,
+    navigator.languages?.slice(0, 3).join(','),
     screen.width + 'x' + screen.height,
     screen.colorDepth,
+    screen.devicePixelRatio || 1,
     new Date().getTimezoneOffset(),
-    navigator.hardwareConcurrency || '',
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    navigator.hardwareConcurrency || 0,
     navigator.platform || '',
+    navigator.maxTouchPoints || 0,
+    // WebGL GPU
+    (() => {
+      try {
+        const c = document.createElement('canvas')
+        const gl = c.getContext('webgl') as WebGLRenderingContext | null
+        if (gl) {
+          const dbg = gl.getExtension('WEBGL_debug_renderer_info')
+          if (dbg) return gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)
+        }
+      } catch {}
+      return ''
+    })(),
+    // Canvas hash
+    (() => {
+      try {
+        const c = document.createElement('canvas')
+        c.width = 100
+        c.height = 30
+        const ctx = c.getContext('2d')
+        if (ctx) {
+          ctx.textBaseline = 'top'
+          ctx.font = '14px Arial'
+          ctx.fillText('FP', 2, 2)
+          return c.toDataURL().slice(-20)
+        }
+      } catch {}
+      return ''
+    })(),
+    // Audio
+    (() => {
+      try {
+        const ac = new (window.AudioContext || (window as unknown as Record<string, unknown>).webkitAudioContext)()
+        return ac.sampleRate
+      } catch {}
+      return ''
+    })(),
+    // Network
+    (() => {
+      const conn = (navigator as unknown as Record<string, unknown>).connection as Record<string, unknown> | undefined
+      return conn ? `${conn.effectiveType}-${conn.downlink}` : ''
+    })(),
+    // Math precision
+    Math.sin(0.123).toString().slice(0, 8) + Math.cos(0.123).toString().slice(0, 8),
+    // Window size
+    window.innerWidth + 'x' + window.innerHeight,
+    // Dark mode
+    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'D' : 'L',
   ]
   
   const fingerprint = components.join('|')
-  return btoa(fingerprint).slice(0, 64)
+  return btoa(fingerprint).slice(0, 128)
 }
 
 // Detecta tipo de dispositivo
