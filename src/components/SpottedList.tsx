@@ -151,8 +151,6 @@ export default function SpottedList() {
   }, [openComments, comments, fetchComments])
 
   const handleAddComment = useCallback(async (spottedId: string) => {
-    if (!supabase) return
-    
     const content = newComment[spottedId]?.trim()
     if (!content || content.length < 1 || content.length > 500) return
 
@@ -160,35 +158,38 @@ export default function SpottedList() {
     const visitorInfo = await getVisitorInfo()
     const contentHtml = formatTextHtml(content)
 
-    const { data, error } = await supabase
-      .from('comments')
-      .insert([{
+    // Usa API com service_role para evitar problemas de RLS
+    const response = await fetch('/api/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         spotted_id: spottedId,
         content,
         content_html: contentHtml,
-        status: 'approved',
         author_ip: visitorInfo.ip,
         author_fingerprint: fingerprint,
-      }])
-      .select('id')
+      })
+    })
 
-    if (error) {
-      console.error('Erro ao salvar comentário:', error)
-      alert('Erro ao salvar comentário: ' + error.message)
+    const result = await response.json()
+
+    if (!response.ok) {
+      console.error('Erro ao salvar comentário:', result.error)
+      alert('Erro ao salvar comentário: ' + result.error)
       return
     }
 
-    if (data && data[0]) {
+    if (result.success && result.id) {
       setNewComment(prev => ({ ...prev, [spottedId]: '' }))
       fetchComments(spottedId)
       // Track do comentário
-      trackCommentCreated(spottedId, data[0].id)
+      trackCommentCreated(spottedId, result.id)
       // Adicionar aos comentários abertos se não estiver
       if (!openComments.includes(spottedId)) {
         setOpenComments(prev => [...prev, spottedId])
       }
     }
-  }, [supabase, newComment, openComments, fetchComments])
+  }, [newComment, openComments, fetchComments])
 
   const handleReport = useCallback(async (spottedId: string) => {
     if (!reportReason.trim()) return
