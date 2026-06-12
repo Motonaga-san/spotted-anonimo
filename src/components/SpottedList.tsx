@@ -191,22 +191,28 @@ export default function SpottedList() {
   }, [supabase, newComment, openComments, fetchComments])
 
   const handleReport = useCallback(async (spottedId: string) => {
-    if (!supabase || !reportReason.trim()) return
+    if (!reportReason.trim()) return
 
     const fingerprint = generateFingerprint()
     const visitorInfo = await getVisitorInfo()
 
-    const { error: reportError } = await supabase
-      .from('reports')
-      .insert([{
-        spotted_id: spottedId,
+    // Usa API com service_role para atualizar status
+    const response = await fetch('/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'spotted',
+        id: spottedId,
         reason: reportReason,
-        status: 'pending',
-        reporter_ip: visitorInfo.ip,
-        reporter_fingerprint: fingerprint,
-      }])
+        reporterIp: visitorInfo.ip,
+        reporterFingerprint: fingerprint,
+      })
+    })
 
-    if (reportError) return
+    if (!response.ok) {
+      console.error('Erro ao denunciar spotted')
+      return
+    }
 
     // Track da denúncia
     trackReport('spotted', spottedId, reportReason)
@@ -215,29 +221,34 @@ export default function SpottedList() {
     setReportReason('')
     setReportSuccess(true)
     
+    // Remove o spotted da lista local imediatamente
+    setSpotteds(prev => prev.filter(s => s.id !== spottedId))
+    
     setTimeout(() => setReportSuccess(false), 3000)
-    fetchSpotteds()
-  }, [supabase, reportReason, fetchSpotteds])
+  }, [reportReason])
 
   const handleReportComment = useCallback(async (spottedId: string, commentId: string) => {
-    if (!supabase || !reportReason.trim()) return
+    if (!reportReason.trim()) return
 
     const fingerprint = generateFingerprint()
     const visitorInfo = await getVisitorInfo()
 
-    const { error: reportError } = await supabase
-      .from('reports')
-      .insert([{
-        spotted_id: spottedId,
-        comment_id: commentId,
+    // Usa API com service_role para atualizar status
+    const response = await fetch('/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'comment',
+        id: commentId,
+        spottedId: spottedId,
         reason: reportReason,
-        status: 'pending',
-        reporter_ip: visitorInfo.ip,
-        reporter_fingerprint: fingerprint,
-      }])
+        reporterIp: visitorInfo.ip,
+        reporterFingerprint: fingerprint,
+      })
+    })
 
-    if (reportError) {
-      console.error('Erro ao denunciar comentário:', reportError)
+    if (!response.ok) {
+      console.error('Erro ao denunciar comentário')
       return
     }
 
@@ -248,14 +259,14 @@ export default function SpottedList() {
     setReportReason('')
     setReportSuccess(true)
     
-    // Remove o comentário da lista local (não altera status no banco - admin decide)
+    // Remove o comentário da lista local
     setComments(prev => ({
       ...prev,
       [spottedId]: prev[spottedId]?.filter(c => c.id !== commentId) || []
     }))
 
     setTimeout(() => setReportSuccess(false), 3000)
-  }, [supabase, reportReason])
+  }, [reportReason])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
