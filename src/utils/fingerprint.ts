@@ -83,7 +83,8 @@ export function generateFingerprint(): FingerprintData {
   
   // Audio fingerprint
   try {
-    const audioContext = new (window.AudioContext || (window as Window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    const audioContext = new AudioContextClass()
     data.audioSampleRate = audioContext.sampleRate
     data.audioChannelCount = audioContext.destination.maxChannelCount
     audioContext.close()
