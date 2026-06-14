@@ -210,14 +210,14 @@ export async function POST(request: NextRequest) {
 
     // Tentar resetar sequência via RPC
     try {
-      await supabase.rpc('reset_sequence', { sequence_name: 'spotteds_number_seq', restart_value: 1 })
+      await supabase.rpc('reset_sequence', { sequence_name: 'spotted_number_seq', restart_value: 1 })
     } catch {
       // Função RPC pode não existir - ignorar
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Todos os dados foram excluídos! Execute no Supabase SQL: ALTER SEQUENCE spotteds_number_seq RESTART WITH 1;'
+      message: 'Todos os dados foram excluídos! Execute no Supabase SQL: ALTER SEQUENCE spotted_number_seq RESTART WITH 1;'
     })
   }
 

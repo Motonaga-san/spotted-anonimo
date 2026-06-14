@@ -20,8 +20,8 @@ DELETE FROM comments WHERE 1=1;
 DELETE FROM spotteds WHERE 1=1;
 
 -- 3. Resetar sequência do contador de spotteds
-ALTER SEQUENCE IF EXISTS spotteds_number_seq RESTART WITH 1;
-SELECT setval('spotteds_number_seq', 1, false);
+ALTER SEQUENCE spotted_number_seq RESTART WITH 1;
+SELECT setval('spotted_number_seq', 1, false);
 
 -- 4. Verificar resultado
 SELECT 
@@ -31,4 +31,4 @@ SELECT
     (SELECT COUNT(*) FROM user_likes) as user_likes,
     (SELECT COUNT(*) FROM security_events) as security_events,
     (SELECT COUNT(*) FROM visitor_sessions) as visitor_sessions,
-    (SELECT last_value FROM spotteds_number_seq) as next_spotted_number;
+    (SELECT last_value FROM spotted_number_seq) as next_spotted_number;
