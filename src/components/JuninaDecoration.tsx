@@ -50,19 +50,19 @@ export default function JuninaDecoration() {
 
       {/* Bandeirinhas de Festa Junina - formato pentágono/pennant */}
       <div className="fixed top-0 left-0 right-0 z-40 pointer-events-none overflow-hidden">
-        <svg className="w-full h-16 md:h-20" viewBox="0 0 1400 80" preserveAspectRatio="none">
+        <svg className="w-full h-20 md:h-24" viewBox="0 0 1400 90" preserveAspectRatio="none">
           {/* Corda das bandeirinhas */}
           <path
             d="M0,20 Q350,12 700,20 T1400,20"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.5"
+            strokeWidth="3"
             className="text-yellow-500/50 dark:text-yellow-400/40"
           />
           
-          {/* Bandeirinhas no estilo Festa Junina - retângulo com V curto entrando */}
-          {[...Array(22)].map((_, i) => {
-            const x = 30 + i * 62
+          {/* Bandeirinhas maiores (juntando 2 em 1) - V com 1/3 da altura */}
+          {[...Array(11)].map((_, i) => {
+            const x = 35 + i * 124  // espaço dobrado
             const colors = [
               COLORS.fire,      // laranja
               COLORS.gold,      // amarelo
@@ -73,14 +73,14 @@ export default function JuninaDecoration() {
               COLORS.purple,    // roxo
             ]
             const color = colors[i % colors.length]
-            const delay = i * 0.12
+            const delay = i * 0.15
             
-            // Dimensões da bandeirinha (retângulo)
-            const width = 24
-            const height = 40
+            // Dimensões da bandeirinha (2x maior - juntando 2 em 1)
+            const width = 48
+            const height = 60
             
-            // Profundidade do V (curto, ~1/5 da altura)
-            const notchDepth = height / 5
+            // Profundidade do V (1/3 da altura)
+            const notchDepth = height / 3
             
             return (
               <g 
@@ -89,12 +89,12 @@ export default function JuninaDecoration() {
                 className="animate-bandeirola"
               >
                 {/* 
-                  Bandeirinha Festa Junina: retângulo com V curto entrando
+                  Bandeirinha Festa Junina: retângulo com V entrando (1/3 da altura)
                   
                        _________   ← topo (corda)
                       |         |
                       |         |
-                      |    /\   |   ← V curto entrando
+                      |    /\   |   ← V entrando (1/3 da altura)
                       |  /    \ |
                       | /      \|   ← base inferior
                       |/        \|
@@ -128,16 +128,16 @@ export default function JuninaDecoration() {
                   `}
                   fill="none"
                   stroke="rgba(0,0,0,0.15)"
-                  strokeWidth="0.5"
+                  strokeWidth="0.8"
                 />
                 {/* Linha decorativa central */}
                 <line
                   x1={x + width/2}
-                  y1="22"
+                  y1="24"
                   x2={x + width/2}
-                  y2={20 + height - notchDepth - 2}
+                  y2={20 + height - notchDepth - 3}
                   stroke="rgba(255,255,255,0.3)"
-                  strokeWidth="1"
+                  strokeWidth="1.5"
                 />
               </g>
             )
