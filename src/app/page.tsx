@@ -23,13 +23,13 @@ export default function Home() {
       <div className="relative container mx-auto px-4 py-8 md:py-12">
         {/* Header */}
         <header className="text-center mb-12 md:mb-16">
-          {/* Banner Festas Juninas */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 mb-6 bg-gradient-to-r from-yellow-500/20 via-orange-500/20 to-pink-500/20 rounded-full border border-yellow-500/30 animate-pulse-soft">
-            <span className="text-lg">🌽</span>
-            <span className="text-sm font-medium text-yellow-400 dark:text-yellow-300">
-              Feliz São João! 🎉
+          {/* Banner Festas Juninas Premium */}
+          <div className="inline-flex items-center gap-3 px-5 py-2.5 mb-6 bg-gradient-to-r from-[#C0392B]/20 via-[#FF7A00]/20 to-[#FFC107]/20 rounded-full border border-[#FF7A00]/40 shadow-lg shadow-[#FF7A00]/10 animate-pulse-soft">
+            <span className="text-xl">🌽</span>
+            <span className="text-sm font-semibold bg-gradient-to-r from-[#FF7A00] via-[#FFC107] to-[#FF7A00] bg-clip-text text-transparent">
+              Arraiá do Spotted 2024
             </span>
-            <span className="text-lg">🔥</span>
+            <span className="text-xl">🔥</span>
           </div>
 
           {/* Logo */}
@@ -73,16 +73,20 @@ export default function Home() {
         <main className="flex flex-col items-center gap-12 md:gap-16">
           {/* Formulário */}
           <section className="w-full max-w-xl">
-            <div className="card-theme p-6 md:p-8 rounded-3xl shadow-xl">
+            <div className="card-theme p-6 md:p-8 rounded-3xl shadow-xl shadow-[#FF7A00]/5 border-[#D4A373]/20">
               <SpottedForm />
             </div>
           </section>
 
-          {/* Divisor */}
+          {/* Divisor decorativo estilo junino */}
           <div className="flex items-center gap-4 w-full max-w-xl">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-            <span className="text-sm text-muted">spotteds públicos</span>
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#FF7A00]/30 to-transparent" />
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-[#1B263B]/30 rounded-full border border-[#FF7A00]/20">
+              <span className="text-sm">🌽</span>
+              <span className="text-sm text-[#FFC107] font-medium">spotteds públicos</span>
+              <span className="text-sm">🔥</span>
+            </div>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#FF7A00]/30 to-transparent" />
           </div>
 
           {/* Lista */}

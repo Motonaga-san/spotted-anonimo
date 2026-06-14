@@ -277,6 +277,19 @@ html {
   66% { transform: scaleX(1.1) scaleY(0.9); }
 }
 
+@keyframes ember-rise {
+  0% { transform: translateY(0) translateX(0); opacity: 1; }
+  50% { transform: translateY(-30px) translateX(5px); opacity: 0.7; }
+  100% { transform: translateY(-60px) translateX(-5px); opacity: 0; }
+}
+
+@keyframes bandeirola-wave {
+  0%, 100% { transform: rotate(-2deg) translateY(0); }
+  25% { transform: rotate(1deg) translateY(-2px); }
+  50% { transform: rotate(2deg) translateY(0); }
+  75% { transform: rotate(-1deg) translateY(-1px); }
+}
+
 .animate-flicker {
   animation: flicker 0.5s ease-in-out infinite;
 }
@@ -295,4 +308,23 @@ html {
 
 .animate-flame {
   animation: flame-dance 0.8s ease-in-out infinite;
+}
+
+.animate-ember {
+  animation: ember-rise 2s ease-out infinite;
+}
+
+.animate-bandeirola {
+  animation: bandeirola-wave 4s ease-in-out infinite;
+}
+
+/* Textura de madeira */
+.wood-texture {
+  background: linear-gradient(135deg, #6F4E37 0%, #8B5A2B 25%, #6F4E37 50%, #8B4513 75%, #6F4E37 100%);
+  background-size: 200% 200%;
+}
+
+/* Gradiente noturno São João */
+.night-gradient {
+  background: linear-gradient(180deg, #1B263B 0%, #0f172a 50%, #1e293b 100%);
 }
