@@ -61,8 +61,8 @@ export default function JuninaDecoration() {
           />
           
           {/* Bandeirinhas maiores (juntando 2 em 1) - V com 1/3 da altura */}
-          {[...Array(11)].map((_, i) => {
-            const x = 35 + i * 124  // espaço dobrado
+          {[...Array(14)].map((_, i) => {
+            const x = 20 + i * 100  // espaçamento menor = mais próximas
             const colors = [
               COLORS.fire,      // laranja
               COLORS.gold,      // amarelo
@@ -73,10 +73,10 @@ export default function JuninaDecoration() {
               COLORS.purple,    // roxo
             ]
             const color = colors[i % colors.length]
-            const delay = i * 0.15
+            const delay = i * 0.12
             
-            // Dimensões da bandeirinha (mais quadrada)
-            const width = 50
+            // Dimensões da bandeirinha (mais larga e próxima)
+            const width = 70
             const height = 45
             
             // Profundidade do V (1/3 da altura)
