@@ -152,29 +152,13 @@ export async function POST(request: NextRequest) {
     
     // Obter localização do Vercel headers
     const country = request.headers.get('x-vercel-ip-country') || ''
-    const city = request.headers.get('x-vercel-ip-city') || ''
-    const region = request.headers.get('x-vercel-ip-country-region') || ''
-    const latitude = request.headers.get('x-vercel-ip-latitude')
-    const longitude = request.headers.get('x-vercel-ip-longitude')
-    const timezone = request.headers.get('x-vercel-ip-timezone') || ''
 
     const sessionData = {
       session_id: sessionId,
       ip_address: ipInfo.ip,
-      ip_public: ipInfo.ip,
-      x_forwarded_for: ipInfo.xForwardedFor,
-      cf_connecting_ip: ipInfo.cfConnectingIP,
-      real_ip: ipInfo.realIP,
       fingerprint,
-      fingerprint_data: fingerprintData,
       user_agent: userAgent,
-      ...parsedUA,
       country,
-      city,
-      region,
-      latitude: latitude ? parseFloat(latitude) : null,
-      longitude: longitude ? parseFloat(longitude) : null,
-      timezone,
       screen_resolution: screenResolution,
       color_depth: colorDepth,
       timezone_offset: timezoneOffset,
