@@ -28,24 +28,115 @@ export default function JuninaDecoration() {
 
   return (
     <>
-      {/* Céu noturno com estrelas */}
+      {/* Céu noturno com constelação do Cruzeiro do Sul */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         {/* Gradiente noturno sutil */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#1B263B]/10 via-transparent to-[#1B263B]/5 dark:from-[#1B263B]/20 dark:via-transparent dark:to-[#1B263B]/10" />
         
-        {/* Estrelas cintilantes */}
-        {[...Array(25)].map((_, i) => (
-          <div
-            key={`star-${i}`}
-            className="absolute w-0.5 h-0.5 md:w-1 md:h-1 bg-yellow-200 rounded-full animate-sparkle"
-            style={{
-              top: `${5 + (i * 3.5)}%`,
-              left: `${2 + (i * 4)}%`,
-              animationDelay: `${i * 0.2}s`,
-              opacity: 0.4,
-            }}
-          />
-        ))}
+        {/* Constelação do Cruzeiro do Sul */}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+          {/* Cruzeiro do Sul - posição no céu brasileiro */}
+          <g transform="translate(25, 15)">
+            {/* Gacrux (Gamma Crucis) - topo do cruzeiro */}
+            <circle cx="0" cy="0" r="1.2" fill="#fef08a" className="animate-sparkle" style={{ animationDelay: '0s' }}>
+              <animate attributeName="opacity" values="0.6;1;0.8;1;0.6" dur="3s" repeatCount="indefinite" />
+            </circle>
+            
+            {/* Delta Crucis - ponta esquerda */}
+            <circle cx="-5" cy="5" r="1" fill="#fef08a" className="animate-sparkle" style={{ animationDelay: '0.3s' }}>
+              <animate attributeName="opacity" values="0.7;1;0.6;1;0.7" dur="2.5s" repeatCount="indefinite" />
+            </circle>
+            
+            {/* Estrela central (ponto de intersecção) - Epsilon Crucis */}
+            <circle cx="0" cy="5" r="0.6" fill="#fef08a">
+              <animate attributeName="opacity" values="0.5;0.8;0.6;0.9;0.5" dur="4s" repeatCount="indefinite" />
+            </circle>
+            
+            {/* Mimosa (Beta Crucis) - ponta direita */}
+            <circle cx="5" cy="5" r="1.1" fill="#fef08a" className="animate-sparkle" style={{ animationDelay: '0.5s' }}>
+              <animate attributeName="opacity" values="0.8;1;0.7;1;0.8" dur="2.8s" repeatCount="indefinite" />
+            </circle>
+            
+            {/* Acrux (Alpha Crucis) - pé do cruzeiro (mais brilhante) */}
+            <circle cx="0" cy="10" r="1.5" fill="#fff" className="animate-sparkle" style={{ animationDelay: '0.2s' }}>
+              <animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="3.5s" repeatCount="indefinite" />
+            </circle>
+            
+            {/* Linhas conectando as estrelas (sutil) */}
+            <g stroke="rgba(254, 240, 138, 0.15)" strokeWidth="0.3">
+              {/* Vertical */}
+              <line x1="0" y1="0" x2="0" y2="10" />
+              {/* Horizontal */}
+              <line x1="-5" y1="5" x2="5" y2="5" />
+            </g>
+          </g>
+          
+          {/* Estrelas ao redor do Cruzeiro - como no céu real */}
+          {[
+            // Estrelas próximas ao Cruzeiro
+            { x: 30, y: 8, r: 0.4, d: '0.1s' },
+            { x: 22, y: 12, r: 0.3, d: '0.4s' },
+            { x: 28, y: 20, r: 0.5, d: '0.6s' },
+            { x: 18, y: 18, r: 0.3, d: '0.8s' },
+            { x: 35, y: 22, r: 0.4, d: '1s' },
+            
+            // Estrelas dispersas pelo céu
+            { x: 5, y: 5, r: 0.5, d: '0.2s' },
+            { x: 10, y: 12, r: 0.3, d: '0.5s' },
+            { x: 3, y: 20, r: 0.4, d: '0.7s' },
+            { x: 8, y: 28, r: 0.3, d: '0.9s' },
+            { x: 15, y: 5, r: 0.4, d: '1.1s' },
+            { x: 12, y: 35, r: 0.5, d: '1.3s' },
+            { x: 20, y: 40, r: 0.3, d: '1.5s' },
+            { x: 35, y: 8, r: 0.4, d: '0.3s' },
+            { x: 45, y: 15, r: 0.5, d: '0.6s' },
+            { x: 50, y: 5, r: 0.3, d: '0.9s' },
+            { x: 55, y: 20, r: 0.4, d: '1.2s' },
+            { x: 60, y: 8, r: 0.3, d: '1.5s' },
+            { x: 65, y: 25, r: 0.5, d: '0.4s' },
+            { x: 70, y: 10, r: 0.4, d: '0.8s' },
+            { x: 75, y: 18, r: 0.3, d: '1.1s' },
+            { x: 80, y: 8, r: 0.5, d: '1.4s' },
+            { x: 85, y: 22, r: 0.4, d: '0.2s' },
+            { x: 90, y: 12, r: 0.3, d: '0.6s' },
+            { x: 95, y: 25, r: 0.4, d: '1s' },
+            
+            // Mais estrelas no céu
+            { x: 40, y: 35, r: 0.3, d: '0.5s' },
+            { x: 55, y: 40, r: 0.4, d: '0.9s' },
+            { x: 70, y: 35, r: 0.3, d: '1.3s' },
+            { x: 85, y: 40, r: 0.5, d: '0.7s' },
+            { x: 25, y: 55, r: 0.4, d: '1.1s' },
+            { x: 40, y: 60, r: 0.3, d: '0.3s' },
+            { x: 60, y: 55, r: 0.4, d: '0.8s' },
+            { x: 75, y: 60, r: 0.3, d: '1.2s' },
+            { x: 90, y: 55, r: 0.4, d: '0.6s' },
+            { x: 10, y: 50, r: 0.3, d: '1s' },
+            { x: 95, y: 70, r: 0.4, d: '0.4s' },
+            { x: 80, y: 75, r: 0.3, d: '0.9s' },
+            { x: 65, y: 80, r: 0.5, d: '1.3s' },
+            { x: 50, y: 75, r: 0.3, d: '0.7s' },
+            { x: 35, y: 80, r: 0.4, d: '1.1s' },
+            { x: 20, y: 75, r: 0.3, d: '0.5s' },
+            { x: 5, y: 80, r: 0.4, d: '1.5s' },
+          ].map((star, i) => (
+            <circle
+              key={`star-${i}`}
+              cx={star.x}
+              cy={star.y}
+              r={star.r}
+              fill="#fef08a"
+            >
+              <animate 
+                attributeName="opacity" 
+                values={`${0.3 + Math.random() * 0.3};${0.5 + Math.random() * 0.4};${0.2 + Math.random() * 0.3};${0.6 + Math.random() * 0.3};${0.3 + Math.random() * 0.3}`}
+                dur={`${2 + Math.random() * 3}s`}
+                repeatCount="indefinite"
+                begin={star.d}
+              />
+            </circle>
+          ))}
+        </svg>
       </div>
 
       {/* Bandeirinhas de Festa Junina - formato pentágono/pennant */}

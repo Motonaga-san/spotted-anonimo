@@ -290,6 +290,24 @@ html {
   75% { transform: rotate(-1deg) translateY(-1px); }
 }
 
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.4; }
+  25% { opacity: 0.8; }
+  50% { opacity: 0.5; }
+  75% { opacity: 1; }
+}
+
+@keyframes star-glow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 1px rgba(254, 240, 138, 0.5));
+    opacity: 0.6;
+  }
+  50% { 
+    filter: drop-shadow(0 0 3px rgba(254, 240, 138, 0.8));
+    opacity: 1;
+  }
+}
+
 .animate-flicker {
   animation: flicker 0.5s ease-in-out infinite;
 }
