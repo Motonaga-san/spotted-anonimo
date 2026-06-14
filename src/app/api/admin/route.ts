@@ -183,5 +183,43 @@ export async function POST(request: NextRequest) {
     })
   }
 
+  if (action === 'reset-all') {
+    // Deletar todos os spotteds
+    await supabase.from('spotteds').delete().not('id', 'is', null)
+    
+    // Deletar todos os comentários
+    await supabase.from('comments').delete().not('id', 'is', null)
+    
+    // Deletar todos os reports
+    await supabase.from('reports').delete().not('id', 'is', null)
+    
+    // Deletar todos os user_likes
+    await supabase.from('user_likes').delete().not('id', 'is', null)
+    
+    // Deletar todos os security_events
+    await supabase.from('security_events').delete().not('id', 'is', null)
+    
+    // Deletar todos os visitor_sessions
+    await supabase.from('visitor_sessions').delete().not('id', 'is', null)
+    
+    // Deletar todos os daily_stats
+    await supabase.from('daily_stats').delete().not('date', 'is', null)
+    
+    // Deletar todos os page_views
+    await supabase.from('page_views').delete().not('id', 'is', null)
+
+    // Tentar resetar a sequência via RPC (se existir)
+    try {
+      await supabase.rpc('reset_spotteds_sequence')
+    } catch {
+      // RPC pode não existir - ignorar
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Todos os dados foram excluídos! Execute no SQL Editor: ALTER SEQUENCE spotteds_number_seq RESTART WITH 1;'
+    })
+  }
+
   return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 }
