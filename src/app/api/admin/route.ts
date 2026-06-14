@@ -208,16 +208,16 @@ export async function POST(request: NextRequest) {
     // Deletar todos os page_views
     await supabase.from('page_views').delete().not('id', 'is', null)
 
-    // Tentar resetar a sequência via RPC (se existir)
+    // Tentar resetar sequência via RPC
     try {
-      await supabase.rpc('reset_spotteds_sequence')
+      await supabase.rpc('reset_sequence', { sequence_name: 'spotteds_number_seq', restart_value: 1 })
     } catch {
-      // RPC pode não existir - ignorar
+      // Função RPC pode não existir - ignorar
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Todos os dados foram excluídos! Execute no SQL Editor: ALTER SEQUENCE spotteds_number_seq RESTART WITH 1;'
+      message: 'Todos os dados foram excluídos! Execute no Supabase SQL: ALTER SEQUENCE spotteds_number_seq RESTART WITH 1;'
     })
   }
 
