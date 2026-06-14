@@ -23,6 +23,15 @@ export default function Home() {
       <div className="relative container mx-auto px-4 py-8 md:py-12">
         {/* Header */}
         <header className="text-center mb-12 md:mb-16">
+          {/* Banner Festas Juninas */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 mb-6 bg-gradient-to-r from-yellow-500/20 via-orange-500/20 to-pink-500/20 rounded-full border border-yellow-500/30 animate-pulse-soft">
+            <span className="text-lg">🌽</span>
+            <span className="text-sm font-medium text-yellow-400 dark:text-yellow-300">
+              Feliz São João! 🎉
+            </span>
+            <span className="text-lg">🔥</span>
+          </div>
+
           {/* Logo */}
           <div className="inline-flex items-center justify-center w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-pink-500 via-red-500 to-orange-500 shadow-xl shadow-pink-500/25 mb-6">
             <svg className="w-10 h-10 md:w-12 md:h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">

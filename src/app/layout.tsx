@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { ToastProvider } from "@/context/ToastContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import SecurityTracker from "@/components/SecurityTracker";
+import JuninaDecoration from "@/components/JuninaDecoration";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,6 +51,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)]">
         <ThemeProvider>
           <ToastProvider>
+            <JuninaDecoration />
             <SecurityTracker />
             <ThemeToggle />
             {children}
