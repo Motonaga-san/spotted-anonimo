@@ -212,32 +212,35 @@ export async function POST(request: NextRequest) {
   if (action === 'update-activity') {
     const { sessionId, activityType } = data
     
-    const updateField: Record<string, number> = {
-      'page_view': { page_views: 1 },
-      'spotted_created': { spotteds_created: 1 },
-      'comment_created': { comments_created: 1 },
-      'like_given': { likes_given: 1 },
-      'report_made': { reports_made: 1 }
-    }[activityType] || {}
-
-    // Upsert manual com incremento
-    const { data: existing } = await supabase
-      .from('visitor_sessions')
-      .select('*')
-      .eq('session_id', sessionId)
-      .single()
-
-    if (existing) {
-      const updates: Record<string, number> = {}
-      for (const [key, value] of Object.entries(updateField)) {
-        updates[key] = (existing[key] || 0) + value
-      }
-      updates['last_activity'] = new Date().toISOString()
-      
-      await supabase
+    // Mapeia tipo de atividade para campo a incrementar
+    const fieldMap: Record<string, string> = {
+      'page_view': 'page_views',
+      'spotted_created': 'spotteds_created',
+      'comment_created': 'comments_created',
+      'like_given': 'likes_given',
+      'report_made': 'reports_made'
+    }
+    
+    const fieldToUpdate = fieldMap[activityType]
+    
+    if (fieldToUpdate) {
+      // Buscar valor atual e incrementar
+      const { data: existing } = await supabase
         .from('visitor_sessions')
-        .update(updates)
+        .select(fieldToUpdate)
         .eq('session_id', sessionId)
+        .single()
+
+      if (existing) {
+        const currentValue = (existing as Record<string, unknown>)[fieldToUpdate] as number || 0
+        await supabase
+          .from('visitor_sessions')
+          .update({ 
+            [fieldToUpdate]: currentValue + 1,
+            'last_activity': new Date().toISOString()
+          })
+          .eq('session_id', sessionId)
+      }
     }
 
     return NextResponse.json({ success: true })
