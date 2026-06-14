@@ -75,9 +75,9 @@ export default function JuninaDecoration() {
             const color = colors[i % colors.length]
             const delay = i * 0.15
             
-            // Dimensões da bandeirinha (2x maior - juntando 2 em 1)
-            const width = 48
-            const height = 60
+            // Dimensões da bandeirinha (mais quadrada)
+            const width = 50
+            const height = 45
             
             // Profundidade do V (1/3 da altura)
             const notchDepth = height / 3
