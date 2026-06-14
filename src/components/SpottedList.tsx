@@ -1,26 +1,43 @@
 'use client'
   
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase, Spotted, Comment, generateFingerprint, getVisitorInfo, trackLike, trackCommentCreated, trackReport, trackClick, trackEvent } from '@/lib/supabase'
 import { formatTextHtml, sanitizeHtml } from '@/lib/moderacao'
 import { REPORT_REASONS } from '@/lib/moderacao'
+import { useToast } from '@/context/ToastContext'
+import { getFingerprintHash } from '@/utils/fingerprint'
  
 export default function SpottedList() {
   const [spotteds, setSpotteds] = useState<Spotted[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(0)
+  const pageSize = 20
   const [likedSpotteds, setLikedSpotteds] = useState<string[]>([])
   const [likedComments, setLikedComments] = useState<string[]>([])
   const [openComments, setOpenComments] = useState<string[]>([])
   const [comments, setComments] = useState<Record<string, Comment[]>>({})
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
   const [newComment, setNewComment] = useState<Record<string, string>>({})
   const [reportingSpotted, setReportingSpotted] = useState<string | null>(null)
   const [reportingComment, setReportingComment] = useState<{ spottedId: string, commentId: string } | null>(null)
   const [reportReason, setReportReason] = useState('')
-  const [reportSuccess, setReportSuccess] = useState(false)
+  const [userFingerprint, setUserFingerprint] = useState<string>('')
+  const { showToast } = useToast()
+  
+  // Filtros e busca
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<'recent' | 'likes' | 'comments'>('recent')
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     if (supabase) {
-      fetchSpotteds()
+      // Get user fingerprint for likes
+      const fp = getFingerprintHash()
+      setUserFingerprint(fp)
+      
+      fetchSpotteds(0)
       const savedSpotteds = localStorage.getItem('liked_spotteds')
       if (savedSpotteds) setLikedSpotteds(JSON.parse(savedSpotteds))
       const savedComments = localStorage.getItem('liked_comments')
@@ -37,35 +54,110 @@ export default function SpottedList() {
     }
   }, [spotteds.length])
 
-  const fetchSpotteds = useCallback(async () => {
+  const fetchSpotteds = useCallback(async (pageNum: number = 0, append: boolean = false) => {
+    if (append) {
+      setLoadingMore(true)
+    } else {
+      setLoading(true)
+    }
+
+    const offset = pageNum * pageSize
+    
     const { data } = await supabase!
       .from('spotteds')
       .select('*')
       .eq('status', 'approved')
       .order('created_at', { ascending: false })
-      .limit(50)
+      .range(offset, offset + pageSize - 1)
 
     if (data) {
-      setSpotteds(data as Spotted[])
-      // Buscar comentários de todos para contar
+      if (append) {
+        setSpotteds(prev => [...prev, ...data as Spotted[]])
+      } else {
+        setSpotteds(data as Spotted[])
+      }
+      
+      setHasMore(data.length === pageSize)
+      
+      // Buscar contagem de comentários para cada spotted
+      const counts: Record<string, number> = {}
       const commentsData: Record<string, Comment[]> = {}
+      
       for (const spotted of data) {
-        const { data: commentsResult } = await supabase!
+        const { count } = await supabase!
           .from('comments')
-          .select('*')
+          .select('*', { count: 'exact', head: true })
           .eq('spotted_id', spotted.id)
           .eq('status', 'approved')
-          .order('created_at', { ascending: true })
         
-        if (commentsResult && commentsResult.length > 0) {
-          commentsData[spotted.id] = commentsResult as Comment[]
-          // Expandir automaticamente se tiver comentários
-          setOpenComments(prev => [...prev, spotted.id])
+        counts[spotted.id] = count || 0
+        
+        // Se tiver comentários, buscar os dados
+        if (count && count > 0) {
+          const { data: commentsResult } = await supabase!
+            .from('comments')
+            .select('*')
+            .eq('spotted_id', spotted.id)
+            .eq('status', 'approved')
+            .order('created_at', { ascending: true })
+          
+          if (commentsResult) {
+            commentsData[spotted.id] = commentsResult as Comment[]
+            // Expandir automaticamente se tiver comentários
+            setOpenComments(prev => [...new Set([...prev, spotted.id])])
+          }
         }
       }
-      setComments(commentsData)
+      
+      setCommentCounts(prev => ({ ...prev, ...counts }))
+      setComments(prev => ({ ...prev, ...commentsData }))
     }
+    
     setLoading(false)
+    setLoadingMore(false)
+  }, [])
+
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore) {
+      const nextPage = page + 1
+      setPage(nextPage)
+      fetchSpotteds(nextPage, true)
+    }
+  }, [loadingMore, hasMore, page, fetchSpotteds])
+
+  // Filtrar e ordenar spotteds
+  const filteredSpotteds = useMemo(() => {
+    let result = [...spotteds]
+    
+    // Filtro de busca
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(s => 
+        s.message.toLowerCase().includes(query) ||
+        `#${s.number}`.includes(query)
+      )
+    }
+    
+    // Ordenação
+    switch (sortBy) {
+      case 'likes':
+        result.sort((a, b) => (b.likes || 0) - (a.likes || 0))
+        break
+      case 'comments':
+        result.sort((a, b) => (commentCounts[b.id] || 0) - (commentCounts[a.id] || 0))
+        break
+      case 'recent':
+      default:
+        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    }
+    
+    return result
+  }, [spotteds, searchQuery, sortBy, commentCounts])
+
+  // Verificar se spotted é novo (< 1 hora)
+  const isNewSpotted = useCallback((createdAt: string) => {
+    const hourAgo = new Date(Date.now() - 60 * 60 * 1000)
+    return new Date(createdAt) > hourAgo
   }, [])
 
   const fetchComments = useCallback(async (spottedId: string) => {
@@ -84,13 +176,16 @@ export default function SpottedList() {
   }, [])
 
   const handleLike = useCallback(async (id: string) => {
-    if (likedSpotteds.includes(id)) return
+    if (likedSpotteds.includes(id)) {
+      showToast('Você já curtiu este spotted', 'info')
+      return
+    }
     
     try {
       const response = await fetch('/api/likes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'spotted', id })
+        body: JSON.stringify({ type: 'spotted', id, fingerprint: userFingerprint })
       })
       
       const data = await response.json()
@@ -100,22 +195,33 @@ export default function SpottedList() {
         const newLiked = [...likedSpotteds, id]
         setLikedSpotteds(newLiked)
         localStorage.setItem('liked_spotteds', JSON.stringify(newLiked))
+        showToast('Curtiu!', 'success')
         // Track do like
         trackLike('spotted', id)
+      } else if (data.alreadyLiked) {
+        // Já curtiu no servidor (outro dispositivo)
+        const newLiked = [...likedSpotteds, id]
+        setLikedSpotteds(newLiked)
+        localStorage.setItem('liked_spotteds', JSON.stringify(newLiked))
+        showToast('Você já curtiu este spotted', 'info')
       }
     } catch (error) {
       console.error('Erro ao dar like:', error)
+      showToast('Erro ao curtir', 'error')
     }
-  }, [likedSpotteds, spotteds])
+  }, [likedSpotteds, spotteds, userFingerprint, showToast])
 
   const handleLikeComment = useCallback(async (spottedId: string, commentId: string) => {
-    if (likedComments.includes(commentId)) return
+    if (likedComments.includes(commentId)) {
+      showToast('Você já curtiu este comentário', 'info')
+      return
+    }
     
     try {
       const response = await fetch('/api/likes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'comment', id: commentId })
+        body: JSON.stringify({ type: 'comment', id: commentId, fingerprint: userFingerprint })
       })
       
       const data = await response.json()
@@ -130,13 +236,20 @@ export default function SpottedList() {
         const newLiked = [...likedComments, commentId]
         setLikedComments(newLiked)
         localStorage.setItem('liked_comments', JSON.stringify(newLiked))
+        showToast('Curtiu!', 'success')
         // Track do like
         trackLike('comment', commentId)
+      } else if (data.alreadyLiked) {
+        const newLiked = [...likedComments, commentId]
+        setLikedComments(newLiked)
+        localStorage.setItem('liked_comments', JSON.stringify(newLiked))
+        showToast('Você já curtiu este comentário', 'info')
       }
     } catch (error) {
       console.error('Erro ao dar like:', error)
+      showToast('Erro ao curtir', 'error')
     }
-  }, [likedComments, comments])
+  }, [likedComments, comments, userFingerprint, showToast])
 
   const toggleComments = useCallback((id: string) => {
     if (openComments.includes(id)) {
@@ -182,6 +295,12 @@ export default function SpottedList() {
     if (result.success && result.id) {
       setNewComment(prev => ({ ...prev, [spottedId]: '' }))
       fetchComments(spottedId)
+      // Incrementar contador de comentários
+      setCommentCounts(prev => ({
+        ...prev,
+        [spottedId]: (prev[spottedId] || 0) + 1
+      }))
+      showToast('Comentário adicionado!', 'success')
       // Track do comentário
       trackCommentCreated(spottedId, result.id)
       // Adicionar aos comentários abertos se não estiver
@@ -189,7 +308,7 @@ export default function SpottedList() {
         setOpenComments(prev => [...prev, spottedId])
       }
     }
-  }, [newComment, openComments, fetchComments])
+  }, [newComment, openComments, fetchComments, showToast])
 
   const handleReport = useCallback(async (spottedId: string) => {
     if (!reportReason.trim()) return
@@ -220,13 +339,11 @@ export default function SpottedList() {
 
     setReportingSpotted(null)
     setReportReason('')
-    setReportSuccess(true)
+    showToast('Denúncia enviada com sucesso!', 'success')
     
     // Remove o spotted da lista local imediatamente
     setSpotteds(prev => prev.filter(s => s.id !== spottedId))
-    
-    setTimeout(() => setReportSuccess(false), 3000)
-  }, [reportReason])
+  }, [reportReason, showToast])
 
   const handleReportComment = useCallback(async (spottedId: string, commentId: string) => {
     if (!reportReason.trim()) return
@@ -258,16 +375,20 @@ export default function SpottedList() {
 
     setReportingComment(null)
     setReportReason('')
-    setReportSuccess(true)
+    showToast('Denúncia enviada com sucesso!', 'success')
     
     // Remove o comentário da lista local
     setComments(prev => ({
       ...prev,
       [spottedId]: prev[spottedId]?.filter(c => c.id !== commentId) || []
     }))
-
-    setTimeout(() => setReportSuccess(false), 3000)
-  }, [reportReason])
+    
+    // Atualizar contador
+    setCommentCounts(prev => ({
+      ...prev,
+      [spottedId]: Math.max(0, (prev[spottedId] || 1) - 1)
+    }))
+  }, [reportReason, showToast])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -287,14 +408,51 @@ export default function SpottedList() {
 
   const copyToClipboard = (id: string) => {
     navigator.clipboard.writeText(`${window.location.origin}/spotted/${id}`)
+    showToast('Link copiado!', 'success')
     trackClick('copy_link', { spotted_id: id })
   }
 
+  // Skeleton loading component
+  const SkeletonCard = () => (
+    <div className="card-theme rounded-2xl shadow-lg shadow-pink-500/5 overflow-hidden animate-pulse">
+      <div className="h-1 bg-gradient-to-r from-pink-500/30 to-orange-500/30" />
+      <div className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="w-16 h-6 bg-input rounded-full" />
+          <div className="w-20 h-4 bg-input rounded" />
+        </div>
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-input" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-input rounded w-3/4" />
+            <div className="h-4 bg-input rounded w-1/2" />
+            <div className="h-4 bg-input rounded w-2/3" />
+          </div>
+        </div>
+        <div className="flex items-center justify-between mt-4 pt-4 border-border border-t">
+          <div className="flex gap-2">
+            <div className="w-16 h-8 bg-input rounded-full" />
+            <div className="w-16 h-8 bg-input rounded-full" />
+          </div>
+          <div className="flex gap-1">
+            <div className="w-8 h-8 bg-input rounded-full" />
+            <div className="w-8 h-8 bg-input rounded-full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 space-y-4">
-        <div className="w-12 h-12 border-4 border-pink-500/30 border-t-pink-500 rounded-full animate-spin" />
-        <p className="text-muted">Carregando spotteds...</p>
+      <div className="w-full max-w-xl space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="w-40 h-8 bg-input rounded animate-pulse" />
+          <div className="w-20 h-6 bg-input rounded-full animate-pulse" />
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
+        </div>
       </div>
     )
   }
@@ -322,21 +480,105 @@ export default function SpottedList() {
         <h2 className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-orange-500 bg-clip-text text-transparent">
           Spotteds Recentes
         </h2>
-        <span className="px-3 py-1 card-theme rounded-full text-sm text-muted">
-          {spotteds.length} {spotteds.length === 1 ? 'spotted' : 'spotteds'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1 card-theme rounded-full text-sm text-muted">
+            {filteredSpotteds.length} {filteredSpotteds.length === 1 ? 'spotted' : 'spotteds'}
+          </span>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`p-2 rounded-lg transition-all ${showFilters ? 'bg-pink-500/20 text-pink-400' : 'text-muted hover:text-primary hover:bg-input'}`}
+            title="Filtros"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h16a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zm10 0a1 1 0 100-2 1 1 0 000 2zm0 4a1 1 0 100-2 1 1 0 000 2zm-4-8a1 1 0 100-2 1 1 0 000 2z" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      {/* Mensagem de denúncia sucesso */}
-      {reportSuccess && (
-        <div className="p-4 bg-green-900/30 border border-green-700/50 rounded-xl text-green-400 animate-fade-in">
-          Denúncia enviada com sucesso. Obrigado por ajudar a manter a comunidade segura!
+      {/* Barra de Busca e Filtros */}
+      {showFilters && (
+        <div className="space-y-3 animate-fade-in">
+          {/* Busca */}
+          <div className="relative">
+            <svg className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar spotteds..."
+              className="w-full pl-10 pr-4 py-3 input-theme rounded-xl focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-primary"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          
+          {/* Ordenação */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSortBy('recent')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                sortBy === 'recent'
+                  ? 'bg-pink-500 text-white'
+                  : 'bg-input text-muted hover:text-primary'
+              }`}
+            >
+              Mais recentes
+            </button>
+            <button
+              onClick={() => setSortBy('likes')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                sortBy === 'likes'
+                  ? 'bg-pink-500 text-white'
+                  : 'bg-input text-muted hover:text-primary'
+              }`}
+            >
+              Mais curtidos
+            </button>
+            <button
+              onClick={() => setSortBy('comments')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                sortBy === 'comments'
+                  ? 'bg-pink-500 text-white'
+                  : 'bg-input text-muted hover:text-primary'
+              }`}
+            >
+              Mais comentados
+            </button>
+          </div>
         </div>
       )}
 
       {/* Lista de Spotteds */}
       <div className="space-y-4">
-        {spotteds.map((spotted, index) => (
+        {filteredSpotteds.length === 0 && !loading && (
+          <div className="text-center py-12 card-theme rounded-2xl">
+            <svg className="w-16 h-16 mx-auto text-muted mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-muted">Nenhum spotted encontrado</p>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="mt-2 text-sm text-pink-400 hover:text-pink-300"
+              >
+                Limpar busca
+              </button>
+            )}
+          </div>
+        )}
+        
+        {filteredSpotteds.map((spotted, index) => (
           <div
             key={spotted.id}
             className="group card-theme rounded-2xl shadow-lg shadow-pink-500/5 hover:shadow-pink-500/10 transition-all duration-300 overflow-hidden"
@@ -349,10 +591,19 @@ export default function SpottedList() {
             <div className="p-5">
               {/* Número e data */}
               <div className="flex items-center justify-between mb-3">
-                <span className="px-3 py-1 bg-gradient-to-r from-pink-500/20 to-orange-500/20 border border-pink-500/30 rounded-full text-sm font-bold text-pink-400">
-                  #{spotted.number || '?'}
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 bg-gradient-to-r from-pink-500/20 to-orange-500/20 border border-pink-500/30 rounded-full text-sm font-bold text-pink-400">
+                    #{spotted.number || '?'}
+                  </span>
+                  {isNewSpotted(spotted.created_at) && (
+                    <span className="px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-xs font-medium animate-pulse">
+                      NOVO
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs text-muted" title={new Date(spotted.created_at).toLocaleString('pt-BR')}>
+                  {formatDate(spotted.created_at)}
                 </span>
-                <span className="text-xs text-muted">{formatDate(spotted.created_at)}</span>
               </div>
 
               {/* Ícone anônimo e mensagem */}
@@ -390,7 +641,7 @@ export default function SpottedList() {
                     <span className="text-sm font-medium">{spotted.likes || 0}</span>
                   </button>
 
-                  {/* Comentários */}
+                  {/* Comentários - sempre mostra contador */}
                   <button
                     onClick={() => toggleComments(spotted.id)}
                     className={`flex items-center gap-1 px-3 py-1.5 rounded-full transition-all ${
@@ -402,7 +653,7 @@ export default function SpottedList() {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
-                    <span className="text-sm font-medium">{comments[spotted.id]?.length || 0}</span>
+                    <span className="text-sm font-medium">{commentCounts[spotted.id] || 0}</span>
                   </button>
                 </div>
 
@@ -521,11 +772,52 @@ export default function SpottedList() {
         ))}
       </div>
 
+      {/* Botão Carregar Mais */}
+      {hasMore && spotteds.length > 0 && (
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="px-6 py-3 bg-gradient-to-r from-pink-500 to-orange-500 text-white font-medium rounded-xl shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {loadingMore ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Carregando...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+                Carregar mais spotteds
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Mensagem quando não há mais spotteds */}
+      {!hasMore && spotteds.length > 0 && (
+        <p className="text-center text-muted text-sm py-4">
+          Você viu todos os {spotteds.length} spotteds!
+        </p>
+      )}
+
       {/* Modal de Denúncia de Spotted */}
       {reportingSpotted && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="card-theme rounded-2xl max-w-md w-full p-6 space-y-4 animate-fade-in">
             <h3 className="text-xl font-bold text-primary">Denunciar Spotted</h3>
+            
+            {/* Preview do conteúdo sendo denunciado */}
+            <div className="p-3 bg-input rounded-xl border border-border">
+              <p className="text-xs text-muted mb-2">Você está denunciando:</p>
+              <p className="text-sm text-primary line-clamp-3">
+                {spotteds.find(s => s.id === reportingSpotted)?.message}
+              </p>
+            </div>
+            
             <p className="text-sm text-muted">
               Ajude-nos a manter a comunidade segura. Denúncias anônimas são revisadas por moderadores.
             </p>
@@ -577,6 +869,15 @@ export default function SpottedList() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="card-theme rounded-2xl max-w-md w-full p-6 space-y-4 animate-fade-in">
             <h3 className="text-xl font-bold text-primary">Denunciar Comentário</h3>
+            
+            {/* Preview do comentário sendo denunciado */}
+            <div className="p-3 bg-input rounded-xl border border-border">
+              <p className="text-xs text-muted mb-2">Você está denunciando:</p>
+              <p className="text-sm text-primary">
+                {comments[reportingComment.spottedId]?.find(c => c.id === reportingComment.commentId)?.content}
+              </p>
+            </div>
+            
             <p className="text-sm text-muted">
               Ajude-nos a manter a comunidade segura. Denúncias anônimas são revisadas por moderadores.
             </p>

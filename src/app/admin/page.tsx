@@ -1,9 +1,10 @@
 'use client'
-
+ 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase, Spotted, Comment, DailyStats } from '@/lib/supabase'
-
+import { useToast } from '@/context/ToastContext'
+ 
 export default function AdminPage() {
   const [spotteds, setSpotteds] = useState<Spotted[]>([])
   const [loading, setLoading] = useState(true)
@@ -21,6 +22,7 @@ export default function AdminPage() {
     todayViews: 0,
     weeklyData: [] as DailyStats[],
   })
+  const { showToast } = useToast()
 
   useEffect(() => {
     const token = sessionStorage.getItem('admin_token')
@@ -60,12 +62,15 @@ export default function AdminPage() {
       if (data.success && data.token) {
         sessionStorage.setItem('admin_token', data.token)
         setAuthenticated(true)
+        showToast('Login realizado!', 'success')
         fetchData()
       } else {
         setAuthError('Senha incorreta')
+        showToast('Senha incorreta', 'error')
       }
     } catch {
       setAuthError('Erro ao autenticar')
+      showToast('Erro ao autenticar', 'error')
     }
   }
 
@@ -133,9 +138,10 @@ export default function AdminPage() {
     })
 
     if (res.ok) {
+      showToast(`${type === 'spotted' ? 'Spotted' : 'Comentário'} aprovado!`, 'success')
       fetchData()
     } else {
-      alert('Erro ao aprovar')
+      showToast('Erro ao aprovar', 'error')
     }
   }
 
@@ -150,9 +156,10 @@ export default function AdminPage() {
     })
 
     if (res.ok) {
+      showToast(`${type === 'spotted' ? 'Spotted' : 'Comentário'} ocultado!`, 'success')
       fetchData()
     } else {
-      alert('Erro ao ocultar')
+      showToast('Erro ao ocultar', 'error')
     }
   }
 
@@ -167,9 +174,10 @@ export default function AdminPage() {
     })
 
     if (res.ok) {
+      showToast(`${type === 'spotted' ? 'Spotted' : 'Comentário'} removido!`, 'success')
       fetchData()
     } else {
-      alert('Erro ao remover')
+      showToast('Erro ao remover', 'error')
     }
   }
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { ToastProvider } from "@/context/ToastContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import SecurityTracker from "@/components/SecurityTracker";
 
@@ -48,9 +49,11 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)]">
         <ThemeProvider>
-          <SecurityTracker />
-          <ThemeToggle />
-          {children}
+          <ToastProvider>
+            <SecurityTracker />
+            <ThemeToggle />
+            {children}
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

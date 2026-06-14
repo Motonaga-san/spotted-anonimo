@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase, generateFingerprint, getVisitorInfo, trackSpottedCreated, trackClick } from '@/lib/supabase'
 import { contemPalavraProibida, formatTextHtml } from '@/lib/moderacao'
+import { useToast } from '@/context/ToastContext'
  
 interface SpottedFormProps {
   onSpottedEnviado?: () => void
@@ -16,6 +17,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
   const [warning, setWarning] = useState('')
   const [showPreview, setShowPreview] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const { showToast } = useToast()
 
   const applyFormat = (format: 'bold' | 'italic') => {
     const textarea = textareaRef.current
@@ -97,6 +99,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
 
     if (submitError) {
       setError('Erro ao enviar. Tente novamente.')
+      showToast('Erro ao enviar spotted', 'error')
       setLoading(false)
       return
     }
@@ -110,6 +113,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
     setMessage('')
     setShowPreview(false)
     setLoading(false)
+    showToast('Spotted enviado com sucesso!', 'success')
     onSpottedEnviado?.()
     
     setTimeout(() => setSuccess(false), 4000)

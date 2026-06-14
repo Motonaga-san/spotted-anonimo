@@ -70,15 +70,22 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
     // Buscar estatísticas em paralelo usando tabelas unificadas
-    const [eventsResult, sessionsResult, spottedsResult, commentsResult] = await Promise.all([
+    const [eventsResult, sessionsResult, spottedsResult, commentsResult, spottedsLikesResult, commentsLikesResult] = await Promise.all([
       supabase.from('security_events').select('*').gte('created_at', startDate),
       supabase.from('visitor_sessions').select('*').gte('started_at', startDate),
       supabase.from('spotteds').select('id', { count: 'exact', head: true }),
-      supabase.from('comments').select('id', { count: 'exact', head: true })
+      supabase.from('comments').select('id', { count: 'exact', head: true }),
+      supabase.from('spotteds').select('likes'),
+      supabase.from('comments').select('likes')
     ])
 
     const events = eventsResult.data || []
     const sessions = sessionsResult.data || []
+    
+    // Calcular total de likes
+    const spottedsLikes = spottedsLikesResult.data?.reduce((sum: number, s: { likes: number }) => sum + (s.likes || 0), 0) || 0
+    const commentsLikes = commentsLikesResult.data?.reduce((sum: number, c: { likes: number }) => sum + (c.likes || 0), 0) || 0
+    const totalLikes = spottedsLikes + commentsLikes
 
     // Calcular métricas
     const stats = {
@@ -86,7 +93,7 @@ export async function GET(request: NextRequest) {
       totalSessions: sessions.length,
       totalSpotteds: spottedsResult.count || 0,
       totalComments: commentsResult.count || 0,
-      totalLikes: sessions.reduce((sum, s) => sum + (s.likes_given || 0), 0),
+      totalLikes: totalLikes,
       uniqueVisitors: new Set(sessions.map(s => s.fingerprint).filter(Boolean)).size,
       uniqueIPs: new Set(sessions.map(s => s.ip_address).filter(Boolean)).size,
       eventsByType: events.reduce((acc: Record<string, number>, e) => {
