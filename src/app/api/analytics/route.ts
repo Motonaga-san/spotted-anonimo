@@ -19,9 +19,17 @@ export async function POST(request: NextRequest) {
   const { action, event, sessionId, data } = body
 
   if (action === 'track-event' && event) {
+    // Usar security_events como tabela unificada de eventos
     const { error } = await supabase
-      .from('analytics_events')
-      .insert([event])
+      .from('security_events')
+      .insert([{
+        event_type: event.event_type || event.type || 'unknown',
+        session_id: sessionId,
+        ip_address: event.ip_address,
+        fingerprint: event.fingerprint,
+        action: event.action || 'track',
+        details: event
+      }])
 
     if (error) {
       console.error('Erro ao registrar evento:', error)
@@ -32,9 +40,9 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === 'update-session' && sessionId && data) {
-    // Upsert da sessão
+    // Usar visitor_sessions como tabela unificada de sessões
     const { error } = await supabase
-      .from('user_sessions')
+      .from('visitor_sessions')
       .upsert([{
         session_id: sessionId,
         ...data,
@@ -61,10 +69,10 @@ export async function GET(request: NextRequest) {
     const days = parseInt(searchParams.get('days') || '7')
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
-    // Buscar estatísticas em paralelo
+    // Buscar estatísticas em paralelo usando tabelas unificadas
     const [eventsResult, sessionsResult, spottedsResult, commentsResult] = await Promise.all([
-      supabase.from('analytics_events').select('*').gte('created_at', startDate),
-      supabase.from('user_sessions').select('*').gte('started_at', startDate),
+      supabase.from('security_events').select('*').gte('created_at', startDate),
+      supabase.from('visitor_sessions').select('*').gte('started_at', startDate),
       supabase.from('spotteds').select('id', { count: 'exact', head: true }),
       supabase.from('comments').select('id', { count: 'exact', head: true })
     ])
@@ -78,9 +86,19 @@ export async function GET(request: NextRequest) {
       totalSessions: sessions.length,
       totalSpotteds: spottedsResult.count || 0,
       totalComments: commentsResult.count || 0,
-      uniqueVisitors: new Set(sessions.map(s => s.visitor_fingerprint).filter(Boolean)).size,
+      totalLikes: sessions.reduce((sum, s) => sum + (s.likes_given || 0), 0),
+      uniqueVisitors: new Set(sessions.map(s => s.fingerprint).filter(Boolean)).size,
+      uniqueIPs: new Set(sessions.map(s => s.ip_address).filter(Boolean)).size,
       eventsByType: events.reduce((acc: Record<string, number>, e) => {
         acc[e.event_type] = (acc[e.event_type] || 0) + 1
+        return acc
+      }, {}),
+      byOS: sessions.reduce((acc: Record<string, number>, s) => {
+        if (s.os_type) acc[s.os_type] = (acc[s.os_type] || 0) + 1
+        return acc
+      }, {}),
+      byBrowser: sessions.reduce((acc: Record<string, number>, s) => {
+        if (s.browser) acc[s.browser] = (acc[s.browser] || 0) + 1
         return acc
       }, {}),
       topCountries: sessions.reduce((acc: Record<string, number>, s) => {
@@ -93,6 +111,10 @@ export async function GET(request: NextRequest) {
       conversionRate: sessions.length 
         ? (((sessions.filter(s => s.spotteds_created > 0).length) / sessions.length) * 100).toFixed(1)
         : 0,
+      suspiciousSessions: sessions.filter(s => s.is_suspicious).length,
+      attackerSessions: sessions.filter(s => s.is_attacker).length,
+      mobileUsers: sessions.filter(s => s.is_mobile).length,
+      botDetected: sessions.filter(s => s.is_bot).length,
     }
 
     return NextResponse.json(stats)
