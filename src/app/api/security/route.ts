@@ -232,7 +232,8 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (existing) {
-        const currentValue = (existing as Record<string, unknown>)[fieldToUpdate] as number || 0
+        const existingData = existing as unknown as Record<string, unknown>
+        const currentValue = (existingData[fieldToUpdate] as number) || 0
         await supabase
           .from('visitor_sessions')
           .update({ 
