@@ -13,6 +13,8 @@ const COLORS = {
   pink: '#ec4899',
   green: '#22c55e',
   yellow: '#eab308',
+  blue: '#3b82f6',
+  purple: '#a855f7',
 }
 
 export default function JuninaDecoration() {
@@ -46,43 +48,86 @@ export default function JuninaDecoration() {
         ))}
       </div>
 
-      {/* Bandeirinhas no topo - mais elaboradas */}
+      {/* Bandeirinhas de Festa Junina - formato pentágono/pennant */}
       <div className="fixed top-0 left-0 right-0 z-40 pointer-events-none overflow-hidden">
-        <svg className="w-full h-10 md:h-14" viewBox="0 0 1400 60" preserveAspectRatio="none">
+        <svg className="w-full h-16 md:h-20" viewBox="0 0 1400 80" preserveAspectRatio="none">
           {/* Corda das bandeirinhas */}
           <path
-            d="M0,25 Q350,15 700,25 T1400,25"
+            d="M0,20 Q350,12 700,20 T1400,20"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
-            className="text-yellow-500/40 dark:text-yellow-400/30"
+            strokeWidth="2.5"
+            className="text-yellow-500/50 dark:text-yellow-400/40"
           />
           
-          {/* Bandeirinhas coloridas com animação */}
-          {[...Array(28)].map((_, i) => {
-            const x = 25 + i * 50
-            const colors = [COLORS.fire, COLORS.gold, COLORS.burntRed, COLORS.green, COLORS.pink, COLORS.yellow]
+          {/* Bandeirinhas no estilo Festa Junina (pentágono) */}
+          {[...Array(22)].map((_, i) => {
+            const x = 30 + i * 62
+            const colors = [
+              COLORS.fire,      // laranja
+              COLORS.gold,      // amarelo
+              COLORS.burntRed,  // vermelho
+              COLORS.green,     // verde
+              COLORS.pink,      // rosa
+              COLORS.blue,      // azul
+              COLORS.purple,    // roxo
+            ]
             const color = colors[i % colors.length]
-            const delay = i * 0.15
+            const delay = i * 0.12
+            
+            // Largura da bandeirinha
+            const width = 24
+            const height = 45
             
             return (
               <g 
                 key={i} 
-                style={{ animationDelay: `${delay}s`, transformOrigin: `${x}px 25px` }} 
+                style={{ animationDelay: `${delay}s`, transformOrigin: `${x + width/2}px 20px` }} 
                 className="animate-bandeirola"
               >
-                {/* Triângulo da bandeirinha */}
+                {/* Bandeirinha estilo Festa Junina - formato pentágono/pennant
+                    Formato: topo reto (preso na corda), laterais descendo,
+                    e ponta inferior voltando para dentro (como um losango invertido na ponta)
+                    
+                    Vértices:
+                    1. (x, 20) - canto superior esquerdo (na corda)
+                    2. (x+width, 20) - canto superior direito (na corda)
+                    3. (x+width*0.85, 20+height*0.7) - lateral direita descendo
+                    4. (x+width/2, 20+height) - ponta central (vértice para baixo)
+                    5. (x+width*0.15, 20+height*0.7) - lateral esquerda descendo
+                */}
                 <polygon
-                  points={`${x},25 ${x+15},25 ${x+7.5},55`}
+                  points={`
+                    ${x},20 
+                    ${x+width},20 
+                    ${x+width*0.85},${20+height*0.7} 
+                    ${x+width/2},${20+height} 
+                    ${x+width*0.15},${20+height*0.7}
+                  `}
                   fill={color}
-                  opacity="0.85"
+                  opacity="0.9"
                 />
-                {/* Linha de contorno */}
+                {/* Contorno sutil */}
                 <polygon
-                  points={`${x},25 ${x+15},25 ${x+7.5},55`}
+                  points={`
+                    ${x},20 
+                    ${x+width},20 
+                    ${x+width*0.85},${20+height*0.7} 
+                    ${x+width/2},${20+height} 
+                    ${x+width*0.15},${20+height*0.7}
+                  `}
                   fill="none"
-                  stroke="rgba(0,0,0,0.2)"
+                  stroke="rgba(0,0,0,0.15)"
                   strokeWidth="0.5"
+                />
+                {/* Linha decorativa central */}
+                <line
+                  x1={x + width/2}
+                  y1="22"
+                  x2={x + width/2}
+                  y2={20 + height - 5}
+                  stroke="rgba(255,255,255,0.3)"
+                  strokeWidth="1"
                 />
               </g>
             )
@@ -187,74 +232,6 @@ export default function JuninaDecoration() {
               <stop offset="100%" stopColor="#FF7A00" stopOpacity="0.5" />
             </radialGradient>
           </defs>
-        </svg>
-      </div>
-
-      {/* Correio Elegante - canto inferior esquerdo */}
-      <div className="fixed bottom-4 left-4 md:bottom-12 md:left-12 z-30 pointer-events-none animate-float-gentle">
-        <svg className="w-20 h-20 md:w-28 md:h-28" viewBox="0 0 100 100">
-          {/* Envelope principal */}
-          <g className="animate-pulse-soft">
-            {/* Corpo do envelope */}
-            <rect x="15" y="30" width="70" height="50" fill={COLORS.burntRed} rx="3" />
-            <rect x="18" y="33" width="64" height="44" fill={COLORS.fire} rx="2" />
-            
-            {/* Aba do envelope */}
-            <path d="M15,35 L50,55 L85,35 L85,33 L15,33 Z" fill={COLORS.burntRed} />
-            <path d="M18,36 L50,53 L82,36 L82,35 L18,35 Z" fill="#d44a33" />
-            
-            {/* Linha de dobra */}
-            <path d="M15,35 L50,55 L85,35" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
-            
-            {/* Coração central */}
-            <path
-              d="M50,62 C50,62 42,54 42,48 C42,43 45,40 50,44 C55,40 58,43 58,48 C58,54 50,62 50,62 Z"
-              fill={COLORS.gold}
-              className="animate-pulse-soft"
-            />
-            {/* Brilho no coração */}
-            <ellipse cx="47" cy="46" rx="2" ry="1.5" fill="rgba(255,255,255,0.4)" />
-          </g>
-          
-          {/* Selos decorativos */}
-          <circle cx="75" cy="40" r="8" fill={COLORS.straw} />
-          <circle cx="75" cy="40" r="6" fill={COLORS.gold} />
-          <text x="75" y="43" textAnchor="middle" fontSize="6" fill={COLORS.burntRed}>S.J</text>
-          
-          {/* Sternilhas decorativas */}
-          <circle cx="20" cy="25" r="2" fill={COLORS.gold} className="animate-sparkle" style={{ animationDelay: '0.2s' }} />
-          <circle cx="80" cy="20" r="2.5" fill={COLORS.fire} className="animate-sparkle" style={{ animationDelay: '0.7s' }} />
-          <circle cx="15" cy="85" r="2" fill={COLORS.gold} className="animate-sparkle" style={{ animationDelay: '1.2s' }} />
-          
-          {/* Peninha */}
-          <path
-            d="M88,25 Q95,15 90,30 Q92,35 88,40 Q85,35 88,25 Z"
-            fill={COLORS.straw}
-            opacity="0.8"
-          />
-          <line x1="88" y1="25" x2="88" y2="40" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />
-        </svg>
-      </div>
-
-      {/* Elementos decorativos flutuantes (milho e chapéu) */}
-      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none opacity-30 dark:opacity-20">
-        <svg className="w-32 h-8" viewBox="0 0 120 30">
-          {/* Espiga de milho */}
-          <ellipse cx="20" cy="15" rx="8" ry="12" fill={COLORS.gold} />
-          <path d="M12,15 Q15,10 12,8 Q20,5 28,8 Q25,10 28,15" fill={COLORS.straw} />
-          
-          {/* Chapéu de palha */}
-          <ellipse cx="60" cy="18" rx="15" ry="8" fill={COLORS.straw} />
-          <rect x="50" y="10" width="20" height="10" fill={COLORS.straw} rx="2" />
-          <rect x="45" y="18" width="30" height="4" fill="#c4a77d" rx="2" />
-          <circle cx="60" cy="14" r="3" fill={COLORS.burntRed} />
-          
-          {/* Sanfona simplificada */}
-          <rect x="90" y="8" width="20" height="16" fill={COLORS.burntRed} rx="2" />
-          <rect x="95" y="12" width="3" height="10" fill="white" rx="1" />
-          <rect x="102" y="12" width="3" height="10" fill="white" rx="1" />
-          <circle cx="95" cy="8" r="2" fill="white" />
-          <circle cx="105" cy="8" r="2" fill="white" />
         </svg>
       </div>
     </>
