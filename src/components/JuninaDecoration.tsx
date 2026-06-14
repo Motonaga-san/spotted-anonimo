@@ -60,7 +60,7 @@ export default function JuninaDecoration() {
             className="text-yellow-500/50 dark:text-yellow-400/40"
           />
           
-          {/* Bandeirinhas no estilo Festa Junina (formato "W" invertido na ponta) */}
+          {/* Bandeirinhas no estilo Festa Junina - retângulo com V curto entrando */}
           {[...Array(22)].map((_, i) => {
             const x = 30 + i * 62
             const colors = [
@@ -75,9 +75,12 @@ export default function JuninaDecoration() {
             const color = colors[i % colors.length]
             const delay = i * 0.12
             
-            // Dimensões da bandeirinha
-            const width = 26
-            const height = 48
+            // Dimensões da bandeirinha (retângulo)
+            const width = 24
+            const height = 40
+            
+            // Profundidade do V (curto, ~1/5 da altura)
+            const notchDepth = height / 5
             
             return (
               <g 
@@ -86,37 +89,30 @@ export default function JuninaDecoration() {
                 className="animate-bandeirola"
               >
                 {/* 
-                  Bandeirinha estilo Festa Junina com ponta em "W" invertido
-                    
-                  Formato:
-                      ___________  (corda)
-                     |           |
-                     |           |
-                      \         /
-                       \       /
-                        \     /
-                        /     \   ← ponta em "W" (virada para dentro)
-                       /       \
-                      /_________\
-                     
+                  Bandeirinha Festa Junina: retângulo com V curto entrando
+                  
+                       _________   ← topo (corda)
+                      |         |
+                      |         |
+                      |    /\   |   ← V curto entrando
+                      |  /    \ |
+                      | /      \|   ← base inferior
+                      |/        \|
+                  
                   Vértices:
-                  1. (x, 20) - canto superior esquerdo
-                  2. (x+width, 20) - canto superior direito
-                  3. (x+width*0.82, 20+height*0.55) - lateral direita descendo
-                  4. (x+width*0.65, 20+height*0.75) - inferior direito externo
-                  5. (x+width*0.5, 20+height*0.5) - centro do "W" (para dentro)
-                  6. (x+width*0.35, 20+height*0.75) - inferior esquerdo externo
-                  7. (x+width*0.18, 20+height*0.55) - lateral esquerda descendo
+                  1. (x, 20) - topo esquerdo
+                  2. (x+width, 20) - topo direito
+                  3. (x+width, 20+height) - canto inferior direito
+                  4. (x+width/2, 20+height-notchDepth) - vértice do V (entrando)
+                  5. (x, 20+height) - canto inferior esquerdo
                 */}
                 <polygon
                   points={`
                     ${x},20 
                     ${x+width},20 
-                    ${x+width*0.82},${20+height*0.55} 
-                    ${x+width*0.65},${20+height*0.75}
-                    ${x+width*0.5},${20+height*0.5}
-                    ${x+width*0.35},${20+height*0.75}
-                    ${x+width*0.18},${20+height*0.55}
+                    ${x+width},${20+height}
+                    ${x+width/2},${20+height-notchDepth}
+                    ${x},${20+height}
                   `}
                   fill={color}
                   opacity="0.9"
@@ -126,11 +122,9 @@ export default function JuninaDecoration() {
                   points={`
                     ${x},20 
                     ${x+width},20 
-                    ${x+width*0.82},${20+height*0.55} 
-                    ${x+width*0.65},${20+height*0.75}
-                    ${x+width*0.5},${20+height*0.5}
-                    ${x+width*0.35},${20+height*0.75}
-                    ${x+width*0.18},${20+height*0.55}
+                    ${x+width},${20+height}
+                    ${x+width/2},${20+height-notchDepth}
+                    ${x},${20+height}
                   `}
                   fill="none"
                   stroke="rgba(0,0,0,0.15)"
@@ -141,7 +135,7 @@ export default function JuninaDecoration() {
                   x1={x + width/2}
                   y1="22"
                   x2={x + width/2}
-                  y2={20 + height*0.48}
+                  y2={20 + height - notchDepth - 2}
                   stroke="rgba(255,255,255,0.3)"
                   strokeWidth="1"
                 />
