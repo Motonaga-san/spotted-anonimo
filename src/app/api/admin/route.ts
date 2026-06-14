@@ -170,19 +170,16 @@ export async function POST(request: NextRequest) {
       .delete()
       .not('id', 'is', null)
 
-    // Resetar a sequência via SQL
-    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/reset_spotteds_counter`, {
-      method: 'POST',
-      headers: {
-        'apikey': serviceRoleKey,
-        'Authorization': `Bearer ${serviceRoleKey}`,
-        'Content-Type': 'application/json'
-      }
-    })
+    // Tentar resetar a sequência via RPC (se existir)
+    try {
+      await supabase.rpc('reset_spotteds_sequence')
+    } catch {
+      // RPC pode não existir - ignorar
+    }
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Todos os spotteds foram excluídos! Para resetar o contador, execute este SQL no Supabase SQL Editor: ALTER SEQUENCE spotteds_number_seq RESTART WITH 1;'
+      message: 'Todos os spotteds foram excluídos! Para resetar o contador, execute no SQL Editor: ALTER SEQUENCE spotteds_number_seq RESTART WITH 1;'
     })
   }
 
