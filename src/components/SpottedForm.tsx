@@ -55,6 +55,10 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Debug: verificar estado do supabase
+    console.log('[DEBUG] supabase client:', supabase ? 'OK' : 'NULL')
+    console.log('[DEBUG] supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL || 'NOT SET')
+    
     if (!supabase) {
       setError('Erro de conexão com o banco de dados')
       return
@@ -84,6 +88,8 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
     // Track do clique em enviar
     trackClick('submit_spotted', { message_length: message.length })
 
+    console.log('[DEBUG] Iniciando insert no Supabase...')
+    
     const { data, error: submitError } = await supabase
       .from('spotteds')
       .insert([{ 
@@ -97,8 +103,11 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
       .select('id')
       .single()
 
+    console.log('[DEBUG] Resultado:', { data, submitError })
+
     if (submitError) {
-      setError('Erro ao enviar. Tente novamente.')
+      console.error('[DEBUG] Erro detalhado:', JSON.stringify(submitError, null, 2))
+      setError(`Erro ao enviar: ${submitError.message || 'Tente novamente.'}`)
       showToast('Erro ao enviar spotted', 'error')
       setLoading(false)
       return
