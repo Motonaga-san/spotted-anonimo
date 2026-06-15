@@ -1,5 +1,3 @@
-import DOMPurify from 'dompurify'
-
 // Lista de palavras proibidas organizadas por categoria
 export const PALAVRAS_PROIBIDAS = {
   // Racismo
@@ -123,6 +121,19 @@ export function censurarTexto(texto: string): string {
   return textoCensurado
 }
 
+// Sanitização simples sem dependência de DOM (funciona em SSR)
+function simpleSanitize(html: string): string {
+  return html
+    // Remove tags de script
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    // Remove atributos perigosos
+    .replace(/on\w+="[^"]*"/gi, '')
+    .replace(/on\w+='[^']*'/gi, '')
+    .replace(/javascript:/gi, '')
+    // Remove tags não permitidas, exceto as seguras
+    .replace(/<(?!\/?(strong|em|br|p)\s*\/?>)[^>]+>/gi, '')
+}
+
 // Formata texto com markdown básico e sanitiza para prevenir XSS
 export function formatTextHtml(text: string): string {
   // Primeiro converte markdown para HTML
@@ -132,17 +143,11 @@ export function formatTextHtml(text: string): string {
     .replace(/_(.+?)_/g, '<em>$1</em>')
     .replace(/\n/g, '<br />')
   
-  // Sanitiza o HTML para remover scripts e tags perigosas
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['strong', 'em', 'br', 'p'],
-    ALLOWED_ATTR: []
-  })
+  // Sanitiza o HTML
+  return simpleSanitize(html)
 }
 
 // Sanitiza HTML já formatado (para conteúdo vindo do banco)
 export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['strong', 'em', 'br', 'p'],
-    ALLOWED_ATTR: []
-  })
+  return simpleSanitize(html)
 }
