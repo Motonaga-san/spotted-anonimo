@@ -80,6 +80,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
     trackClick('submit_spotted', { message_length: message.length })
 
     // Usar API em vez de supabase client direto
+    // O IP é extraído pela API dos headers (mais seguro)
     try {
       const response = await fetch('/api/spotteds', {
         method: 'POST',
@@ -87,7 +88,6 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
         body: JSON.stringify({
           message,
           message_html: messageHtml,
-          author_ip: visitorInfo.ip,
           author_fingerprint: fingerprint,
         })
       })
