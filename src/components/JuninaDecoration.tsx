@@ -96,11 +96,7 @@ export default function JuninaDecoration() {
               <animate attributeName="opacity" values="0.85;1;0.9;1;0.85" dur="4.5s" repeatCount="indefinite" />
             </circle>
             
-            {/* Linhas conectando as estrelas (muito sutil) */}
-            <g stroke="rgba(186, 230, 253, 0.06)" strokeWidth="0.08">
-              <line x1="0" y1="0" x2="0" y2="4" />
-              <line x1="-2" y1="2" x2="2" y2="2" />
-            </g>
+            {/* Sem linhas conectando - apenas as estrelas */}
           </g>
           
           {/* Estrelas ao redor - menores e com brilho azulado */}
