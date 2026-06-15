@@ -122,21 +122,6 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
     }
   }
 
-    // Registra evento de criação para analytics
-    if (data?.id) {
-      trackSpottedCreated(data.id)
-    }
-
-    setSuccess(true)
-    setMessage('')
-    setShowPreview(false)
-    setLoading(false)
-    showToast('Spotted enviado com sucesso!', 'success')
-    onSpottedEnviado?.()
-    
-    setTimeout(() => setSuccess(false), 4000)
-  }
-
   const caracteresRestantes = 2000 - message.length
   const progresso = Math.min((message.length / 2000) * 100, 100)
 
