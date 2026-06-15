@@ -10,8 +10,10 @@ export async function GET() {
     hasSupabaseUrl: !!supabaseUrl,
     supabaseUrlLength: supabaseUrl.length,
     supabaseUrlPreview: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'NOT SET',
+    supabaseUrlFull: supabaseUrl,
     hasAnonKey: !!supabaseAnonKey,
     anonKeyLength: supabaseAnonKey.length,
+    anonKeyPreview: supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'NOT SET',
     hasServiceKey: !!serviceRoleKey,
     serviceKeyLength: serviceRoleKey.length,
   }
@@ -25,6 +27,7 @@ export async function GET() {
       connectionTest = {
         success: !error,
         error: error?.message || null,
+        errorFull: error ? JSON.stringify(error) : null,
         dataReceived: !!data
       }
     } catch (e) {
@@ -71,6 +74,7 @@ export async function GET() {
     env: envStatus,
     connection: connectionTest,
     insert: insertTest,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    note: 'Server-side debug - NEXT_PUBLIC vars should be available at build time for client'
   })
 }

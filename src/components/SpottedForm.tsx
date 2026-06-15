@@ -55,15 +55,6 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Debug: verificar estado do supabase
-    console.log('[DEBUG] supabase client:', supabase ? 'OK' : 'NULL')
-    console.log('[DEBUG] supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL || 'NOT SET')
-    
-    if (!supabase) {
-      setError('Erro de conexão com o banco de dados')
-      return
-    }
-    
     setLoading(true)
     setError('')
 
@@ -88,30 +79,48 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
     // Track do clique em enviar
     trackClick('submit_spotted', { message_length: message.length })
 
-    console.log('[DEBUG] Iniciando insert no Supabase...')
-    
-    const { data, error: submitError } = await supabase
-      .from('spotteds')
-      .insert([{ 
-        message, 
-        message_html: messageHtml,
-        status: 'approved',
-        likes: 0,
-        author_ip: visitorInfo.ip,
-        author_fingerprint: fingerprint,
-      }])
-      .select('id')
-      .single()
+    // Usar API em vez de supabase client direto
+    try {
+      const response = await fetch('/api/spotteds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          message_html: messageHtml,
+          author_ip: visitorInfo.ip,
+          author_fingerprint: fingerprint,
+        })
+      })
 
-    console.log('[DEBUG] Resultado:', { data, submitError })
+      const result = await response.json()
 
-    if (submitError) {
-      console.error('[DEBUG] Erro detalhado:', JSON.stringify(submitError, null, 2))
-      setError(`Erro ao enviar: ${submitError.message || 'Tente novamente.'}`)
+      if (!response.ok || result.error) {
+        setError(`Erro ao enviar: ${result.error || 'Tente novamente.'}`)
+        showToast('Erro ao enviar spotted', 'error')
+        setLoading(false)
+        return
+      }
+
+      // Registra evento de criação para analytics
+      if (result.id) {
+        trackSpottedCreated(result.id)
+      }
+
+      setSuccess(true)
+      setMessage('')
+      setShowPreview(false)
+      setLoading(false)
+      showToast('Spotted enviado com sucesso!', 'success')
+      onSpottedEnviado?.()
+      
+      setTimeout(() => setSuccess(false), 4000)
+    } catch (err) {
+      console.error('Erro ao enviar spotted:', err)
+      setError('Erro ao enviar. Tente novamente.')
       showToast('Erro ao enviar spotted', 'error')
       setLoading(false)
-      return
     }
+  }
 
     // Registra evento de criação para analytics
     if (data?.id) {

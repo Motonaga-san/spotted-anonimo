@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   })
 
   const body = await request.json()
-  const { message, message_html } = body
+  const { message, message_html, author_ip, author_fingerprint } = body
 
   if (!message || message.length < 10) {
     return NextResponse.json({ error: 'Message must be at least 10 characters' }, { status: 400 })
@@ -53,6 +53,8 @@ export async function POST(request: NextRequest) {
       message_html: formattedHtml,
       status: 'approved',
       likes: 0,
+      author_ip: author_ip || null,
+      author_fingerprint: author_fingerprint || null,
     }])
     .select('id, number')
     .single()
