@@ -33,106 +33,120 @@ export default function JuninaDecoration() {
         {/* Gradiente noturno sutil */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#1B263B]/10 via-transparent to-[#1B263B]/5 dark:from-[#1B263B]/20 dark:via-transparent dark:to-[#1B263B]/10" />
         
-        {/* Constelação do Cruzeiro do Sul */}
+        {/* Constelação do Cruzeiro do Sul - centralizado */}
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
-          {/* Cruzeiro do Sul - posição no céu brasileiro */}
-          <g transform="translate(25, 15)">
+          {/* Definições de filtros para brilho realista */}
+          <defs>
+            <filter id="star-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="0.3" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            <filter id="star-glow-bright" x="-100%" y="-100%" width="300%" height="300%">
+              <feGaussianBlur stdDeviation="0.5" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            <radialGradient id="star-gradient">
+              <stop offset="0%" stopColor="#ffffff"/>
+              <stop offset="30%" stopColor="#fef9c3"/>
+              <stop offset="100%" stopColor="#fef08a" stopOpacity="0"/>
+            </radialGradient>
+          </defs>
+          
+          {/* Cruzeiro do Sul - centralizado no céu */}
+          <g transform="translate(50, 18)">
             {/* Gacrux (Gamma Crucis) - topo do cruzeiro */}
-            <circle cx="0" cy="0" r="1.2" fill="#fef08a" className="animate-sparkle" style={{ animationDelay: '0s' }}>
-              <animate attributeName="opacity" values="0.6;1;0.8;1;0.6" dur="3s" repeatCount="indefinite" />
+            <circle cx="0" cy="0" r="1.8" fill="url(#star-gradient)" filter="url(#star-glow)">
+              <animate attributeName="opacity" values="0.7;1;0.85;0.95;0.7" dur="4s" repeatCount="indefinite" />
             </circle>
             
             {/* Delta Crucis - ponta esquerda */}
-            <circle cx="-5" cy="5" r="1" fill="#fef08a" className="animate-sparkle" style={{ animationDelay: '0.3s' }}>
-              <animate attributeName="opacity" values="0.7;1;0.6;1;0.7" dur="2.5s" repeatCount="indefinite" />
+            <circle cx="-6" cy="6" r="1.5" fill="url(#star-gradient)" filter="url(#star-glow)">
+              <animate attributeName="opacity" values="0.75;0.95;0.8;1;0.75" dur="3.5s" repeatCount="indefinite" />
             </circle>
             
-            {/* Estrela central (ponto de intersecção) - Epsilon Crucis */}
-            <circle cx="0" cy="5" r="0.6" fill="#fef08a">
-              <animate attributeName="opacity" values="0.5;0.8;0.6;0.9;0.5" dur="4s" repeatCount="indefinite" />
+            {/* Epsilon Crucis - estrela central (menor) */}
+            <circle cx="0" cy="6" r="0.9" fill="url(#star-gradient)" filter="url(#star-glow)">
+              <animate attributeName="opacity" values="0.6;0.85;0.7;0.9;0.6" dur="5s" repeatCount="indefinite" />
             </circle>
             
             {/* Mimosa (Beta Crucis) - ponta direita */}
-            <circle cx="5" cy="5" r="1.1" fill="#fef08a" className="animate-sparkle" style={{ animationDelay: '0.5s' }}>
-              <animate attributeName="opacity" values="0.8;1;0.7;1;0.8" dur="2.8s" repeatCount="indefinite" />
+            <circle cx="6" cy="6" r="1.6" fill="url(#star-gradient)" filter="url(#star-glow)">
+              <animate attributeName="opacity" values="0.8;1;0.75;0.95;0.8" dur="3.8s" repeatCount="indefinite" />
             </circle>
             
             {/* Acrux (Alpha Crucis) - pé do cruzeiro (mais brilhante) */}
-            <circle cx="0" cy="10" r="1.5" fill="#fff" className="animate-sparkle" style={{ animationDelay: '0.2s' }}>
-              <animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="3.5s" repeatCount="indefinite" />
+            <circle cx="0" cy="12" r="2" fill="url(#star-gradient)" filter="url(#star-glow-bright)">
+              <animate attributeName="opacity" values="0.85;1;0.9;1;0.85" dur="4.5s" repeatCount="indefinite" />
             </circle>
             
-            {/* Linhas conectando as estrelas (sutil) */}
-            <g stroke="rgba(254, 240, 138, 0.15)" strokeWidth="0.3">
-              {/* Vertical */}
-              <line x1="0" y1="0" x2="0" y2="10" />
-              {/* Horizontal */}
-              <line x1="-5" y1="5" x2="5" y2="5" />
+            {/* Linhas conectando as estrelas (muito sutil) */}
+            <g stroke="rgba(254, 240, 138, 0.08)" strokeWidth="0.2">
+              <line x1="0" y1="0" x2="0" y2="12" />
+              <line x1="-6" y1="6" x2="6" y2="6" />
             </g>
           </g>
           
-          {/* Estrelas ao redor do Cruzeiro - como no céu real */}
+          {/* Estrelas ao redor - com brilho realista */}
           {[
-            // Estrelas próximas ao Cruzeiro
-            { x: 30, y: 8, r: 0.4, d: '0.1s' },
-            { x: 22, y: 12, r: 0.3, d: '0.4s' },
-            { x: 28, y: 20, r: 0.5, d: '0.6s' },
-            { x: 18, y: 18, r: 0.3, d: '0.8s' },
-            { x: 35, y: 22, r: 0.4, d: '1s' },
+            // Próximas ao Cruzeiro
+            { x: 58, y: 14, r: 0.6, dur: 3.2 },
+            { x: 42, y: 18, r: 0.5, dur: 4.1 },
+            { x: 56, y: 26, r: 0.7, dur: 3.7 },
+            { x: 44, y: 30, r: 0.5, dur: 4.5 },
+            { x: 62, y: 20, r: 0.55, dur: 3.9 },
             
-            // Estrelas dispersas pelo céu
-            { x: 5, y: 5, r: 0.5, d: '0.2s' },
-            { x: 10, y: 12, r: 0.3, d: '0.5s' },
-            { x: 3, y: 20, r: 0.4, d: '0.7s' },
-            { x: 8, y: 28, r: 0.3, d: '0.9s' },
-            { x: 15, y: 5, r: 0.4, d: '1.1s' },
-            { x: 12, y: 35, r: 0.5, d: '1.3s' },
-            { x: 20, y: 40, r: 0.3, d: '1.5s' },
-            { x: 35, y: 8, r: 0.4, d: '0.3s' },
-            { x: 45, y: 15, r: 0.5, d: '0.6s' },
-            { x: 50, y: 5, r: 0.3, d: '0.9s' },
-            { x: 55, y: 20, r: 0.4, d: '1.2s' },
-            { x: 60, y: 8, r: 0.3, d: '1.5s' },
-            { x: 65, y: 25, r: 0.5, d: '0.4s' },
-            { x: 70, y: 10, r: 0.4, d: '0.8s' },
-            { x: 75, y: 18, r: 0.3, d: '1.1s' },
-            { x: 80, y: 8, r: 0.5, d: '1.4s' },
-            { x: 85, y: 22, r: 0.4, d: '0.2s' },
-            { x: 90, y: 12, r: 0.3, d: '0.6s' },
-            { x: 95, y: 25, r: 0.4, d: '1s' },
-            
-            // Mais estrelas no céu
-            { x: 40, y: 35, r: 0.3, d: '0.5s' },
-            { x: 55, y: 40, r: 0.4, d: '0.9s' },
-            { x: 70, y: 35, r: 0.3, d: '1.3s' },
-            { x: 85, y: 40, r: 0.5, d: '0.7s' },
-            { x: 25, y: 55, r: 0.4, d: '1.1s' },
-            { x: 40, y: 60, r: 0.3, d: '0.3s' },
-            { x: 60, y: 55, r: 0.4, d: '0.8s' },
-            { x: 75, y: 60, r: 0.3, d: '1.2s' },
-            { x: 90, y: 55, r: 0.4, d: '0.6s' },
-            { x: 10, y: 50, r: 0.3, d: '1s' },
-            { x: 95, y: 70, r: 0.4, d: '0.4s' },
-            { x: 80, y: 75, r: 0.3, d: '0.9s' },
-            { x: 65, y: 80, r: 0.5, d: '1.3s' },
-            { x: 50, y: 75, r: 0.3, d: '0.7s' },
-            { x: 35, y: 80, r: 0.4, d: '1.1s' },
-            { x: 20, y: 75, r: 0.3, d: '0.5s' },
-            { x: 5, y: 80, r: 0.4, d: '1.5s' },
+            // Dispersas pelo céu
+            { x: 8, y: 8, r: 0.7, dur: 4.2 },
+            { x: 15, y: 15, r: 0.5, dur: 3.5 },
+            { x: 5, y: 25, r: 0.6, dur: 4.8 },
+            { x: 12, y: 35, r: 0.5, dur: 3.3 },
+            { x: 20, y: 6, r: 0.55, dur: 4.6 },
+            { x: 25, y: 45, r: 0.6, dur: 3.8 },
+            { x: 8, y: 55, r: 0.5, dur: 4.4 },
+            { x: 72, y: 8, r: 0.65, dur: 3.6 },
+            { x: 80, y: 15, r: 0.5, dur: 4.3 },
+            { x: 88, y: 10, r: 0.55, dur: 3.4 },
+            { x: 92, y: 22, r: 0.6, dur: 4.7 },
+            { x: 78, y: 28, r: 0.5, dur: 3.9 },
+            { x: 85, y: 35, r: 0.55, dur: 4.1 },
+            { x: 95, y: 45, r: 0.5, dur: 3.7 },
+            { x: 75, y: 55, r: 0.6, dur: 4.5 },
+            { x: 88, y: 60, r: 0.5, dur: 3.3 },
+            { x: 92, y: 75, r: 0.55, dur: 4.2 },
+            { x: 80, y: 80, r: 0.5, dur: 3.8 },
+            { x: 65, y: 85, r: 0.6, dur: 4.6 },
+            { x: 50, y: 75, r: 0.5, dur: 3.5 },
+            { x: 35, y: 80, r: 0.55, dur: 4.4 },
+            { x: 22, y: 70, r: 0.5, dur: 3.6 },
+            { x: 10, y: 75, r: 0.6, dur: 4.8 },
+            { x: 5, y: 85, r: 0.5, dur: 3.4 },
+            { x: 30, y: 55, r: 0.55, dur: 4.0 },
+            { x: 70, y: 45, r: 0.5, dur: 3.7 },
+            { x: 45, y: 50, r: 0.6, dur: 4.3 },
+            { x: 55, y: 60, r: 0.5, dur: 3.9 },
+            { x: 40, y: 65, r: 0.55, dur: 4.5 },
+            { x: 60, y: 70, r: 0.5, dur: 3.6 },
           ].map((star, i) => (
             <circle
               key={`star-${i}`}
               cx={star.x}
               cy={star.y}
               r={star.r}
-              fill="#fef08a"
+              fill="url(#star-gradient)"
+              filter="url(#star-glow)"
             >
               <animate 
                 attributeName="opacity" 
-                values={`${0.3 + Math.random() * 0.3};${0.5 + Math.random() * 0.4};${0.2 + Math.random() * 0.3};${0.6 + Math.random() * 0.3};${0.3 + Math.random() * 0.3}`}
-                dur={`${2 + Math.random() * 3}s`}
+                values={`${0.5 + (i % 3) * 0.15};${0.7 + (i % 4) * 0.1};${0.55 + (i % 2) * 0.15};${0.65 + (i % 3) * 0.12};${0.5 + (i % 3) * 0.15}`}
+                dur={`${star.dur}s`}
                 repeatCount="indefinite"
-                begin={star.d}
               />
             </circle>
           ))}
