@@ -39,7 +39,7 @@ export default function JuninaDecoration() {
           <defs>
             {/* Filtro para halo violeta suave */}
             <filter id="star-halo" x="-300%" y="-300%" width="700%" height="700%">
-              <feGaussianBlur stdDeviation="0.4" result="blur"/>
+              <feGaussianBlur stdDeviation="0.35" result="blur"/>
               <feMerge>
                 <feMergeNode in="blur"/>
                 <feMergeNode in="blur"/>
@@ -48,7 +48,7 @@ export default function JuninaDecoration() {
             </filter>
             {/* Filtro para estrelas mais brilhantes */}
             <filter id="star-halo-bright" x="-400%" y="-400%" width="900%" height="900%">
-              <feGaussianBlur stdDeviation="0.6" result="blur"/>
+              <feGaussianBlur stdDeviation="0.5" result="blur"/>
               <feMerge>
                 <feMergeNode in="blur"/>
                 <feMergeNode in="blur"/>
@@ -69,46 +69,83 @@ export default function JuninaDecoration() {
               <stop offset="50%" stopColor="#ddd6fe"/>
               <stop offset="100%" stopColor="#a78bfa" stopOpacity="0"/>
             </radialGradient>
+            
+            {/* Componente de estrela de 4 pontas com raios afinando */}
+            <g id="star-4-points">
+              {/* Halo violeta */}
+              <circle cx="0" cy="0" r="0.7" fill="url(#halo-violet)"/>
+              {/* Núcleo branco */}
+              <circle cx="0" cy="0" r="0.1" fill="#ffffff"/>
+              {/* 4 raios afinando da base para a ponta (losangos) */}
+              {/* Raio superior - sai dos lados e afina até a ponta */}
+              <polygon points="0,-0.55 -0.06,-0.08 0.06,-0.08" fill="#ffffff"/>
+              {/* Raio inferior */}
+              <polygon points="0,0.55 -0.06,0.08 0.06,0.08" fill="#ffffff"/>
+              {/* Raio esquerdo */}
+              <polygon points="-0.55,0 -0.08,-0.06 -0.08,0.06" fill="#ffffff"/>
+              {/* Raio direito */}
+              <polygon points="0.55,0 0.08,-0.06 0.08,0.06" fill="#ffffff"/>
+            </g>
+            
+            {/* Estrela menor */}
+            <g id="star-small-template">
+              <circle cx="0" cy="0" r="0.35" fill="url(#star-small)"/>
+              <circle cx="0" cy="0" r="0.05" fill="#ffffff"/>
+              <polygon points="0,-0.25 -0.04,-0.04 0.04,-0.04" fill="#ffffff"/>
+              <polygon points="0,0.25 -0.04,0.04 0.04,0.04" fill="#ffffff"/>
+              <polygon points="-0.25,0 -0.04,-0.04 -0.04,0.04" fill="#ffffff"/>
+              <polygon points="0.25,0 0.04,-0.04 0.04,0.04" fill="#ffffff"/>
+            </g>
+            
+            {/* Estrela ainda menor */}
+            <g id="star-tiny-template">
+              <circle cx="0" cy="0" r="0.2" fill="url(#star-small)"/>
+              <circle cx="0" cy="0" r="0.03" fill="#ffffff"/>
+              <polygon points="0,-0.15 -0.025,-0.025 0.025,-0.025" fill="#ffffff"/>
+              <polygon points="0,0.15 -0.025,0.025 0.025,0.025" fill="#ffffff"/>
+              <polygon points="-0.15,0 -0.025,-0.025 -0.025,0.025" fill="#ffffff"/>
+              <polygon points="0.15,0 0.025,-0.025 0.025,0.025" fill="#ffffff"/>
+            </g>
           </defs>
           
           {/* Cruzeiro do Sul - centralizado e mais baixo no céu */}
           <g transform="translate(50, 32)">
-            {/* Gacrux (Gamma Crucis) - topo do cruzeiro - estrela de 4 pontas */}
+            {/* Gacrux (Gamma Crucis) - topo do cruzeiro */}
             <g filter="url(#star-halo)">
-              {/* Halo violeta */}
-              <circle cx="0" cy="0" r="0.8" fill="url(#halo-violet)"/>
-              {/* Núcleo branco */}
+              <circle cx="0" cy="0" r="0.85" fill="url(#halo-violet)"/>
               <circle cx="0" cy="0" r="0.12" fill="#ffffff"/>
-              {/* Raios da cruz - 4 pontas */}
-              <line x1="0" y1="-0.5" x2="0" y2="0.5" stroke="#ffffff" strokeWidth="0.08" strokeLinecap="round"/>
-              <line x1="-0.5" y1="0" x2="0.5" y2="0" stroke="#ffffff" strokeWidth="0.08" strokeLinecap="round"/>
+              {/* Raios afinando */}
+              <polygon points="0,-0.6 -0.07,-0.1 0.07,-0.1" fill="#ffffff"/>
+              <polygon points="0,0.6 -0.07,0.1 0.07,0.1" fill="#ffffff"/>
+              <polygon points="-0.6,0 -0.1,-0.07 -0.1,0.07" fill="#ffffff"/>
+              <polygon points="0.6,0 0.1,-0.07 0.1,0.07" fill="#ffffff"/>
               <animate attributeName="opacity" values="0.7;1;0.85;0.95;0.7" dur="4s" repeatCount="indefinite" />
             </g>
             
             {/* Delta Crucis - ponta esquerda */}
             <g transform="translate(-2, 2)" filter="url(#star-halo)">
-              <circle cx="0" cy="0" r="0.7" fill="url(#halo-violet)"/>
+              <circle cx="0" cy="0" r="0.72" fill="url(#halo-violet)"/>
               <circle cx="0" cy="0" r="0.1" fill="#ffffff"/>
-              <line x1="0" y1="-0.4" x2="0" y2="0.4" stroke="#ffffff" strokeWidth="0.06" strokeLinecap="round"/>
-              <line x1="-0.4" y1="0" x2="0.4" y2="0" stroke="#ffffff" strokeWidth="0.06" strokeLinecap="round"/>
+              <polygon points="0,-0.5 -0.06,-0.08 0.06,-0.08" fill="#ffffff"/>
+              <polygon points="0,0.5 -0.06,0.08 0.06,0.08" fill="#ffffff"/>
+              <polygon points="-0.5,0 -0.08,-0.06 -0.08,0.06" fill="#ffffff"/>
+              <polygon points="0.5,0 0.08,-0.06 0.08,0.06" fill="#ffffff"/>
               <animate attributeName="opacity" values="0.75;0.95;0.8;1;0.75" dur="3.5s" repeatCount="indefinite" />
             </g>
             
             {/* Epsilon Crucis - estrela central (menor) */}
-            <g transform="translate(0, 2)" filter="url(#star-halo)">
-              <circle cx="0" cy="0" r="0.4" fill="url(#star-small)"/>
-              <circle cx="0" cy="0" r="0.06" fill="#ffffff"/>
-              <line x1="0" y1="-0.25" x2="0" y2="0.25" stroke="#ffffff" strokeWidth="0.04" strokeLinecap="round"/>
-              <line x1="-0.25" y1="0" x2="0.25" y2="0" stroke="#ffffff" strokeWidth="0.04" strokeLinecap="round"/>
+            <use href="#star-small-template" transform="translate(0, 2)" filter="url(#star-halo)">
               <animate attributeName="opacity" values="0.6;0.85;0.7;0.9;0.6" dur="5s" repeatCount="indefinite" />
-            </g>
+            </use>
             
             {/* Mimosa (Beta Crucis) - ponta direita */}
             <g transform="translate(2, 2)" filter="url(#star-halo)">
-              <circle cx="0" cy="0" r="0.72" fill="url(#halo-violet)"/>
+              <circle cx="0" cy="0" r="0.75" fill="url(#halo-violet)"/>
               <circle cx="0" cy="0" r="0.1" fill="#ffffff"/>
-              <line x1="0" y1="-0.42" x2="0" y2="0.42" stroke="#ffffff" strokeWidth="0.06" strokeLinecap="round"/>
-              <line x1="-0.42" y1="0" x2="0.42" y2="0" stroke="#ffffff" strokeWidth="0.06" strokeLinecap="round"/>
+              <polygon points="0,-0.52 -0.06,-0.08 0.06,-0.08" fill="#ffffff"/>
+              <polygon points="0,0.52 -0.06,0.08 0.06,0.08" fill="#ffffff"/>
+              <polygon points="-0.52,0 -0.08,-0.06 -0.08,0.06" fill="#ffffff"/>
+              <polygon points="0.52,0 0.08,-0.06 0.08,0.06" fill="#ffffff"/>
               <animate attributeName="opacity" values="0.8;1;0.75;0.95;0.8" dur="3.8s" repeatCount="indefinite" />
             </g>
             
@@ -116,76 +153,82 @@ export default function JuninaDecoration() {
             <g transform="translate(0, 4)" filter="url(#star-halo-bright)">
               <circle cx="0" cy="0" r="1" fill="url(#halo-violet)"/>
               <circle cx="0" cy="0" r="0.15" fill="#ffffff"/>
-              <line x1="0" y1="-0.6" x2="0" y2="0.6" stroke="#ffffff" strokeWidth="0.1" strokeLinecap="round"/>
-              <line x1="-0.6" y1="0" x2="0.6" y2="0" stroke="#ffffff" strokeWidth="0.1" strokeLinecap="round"/>
+              <polygon points="0,-0.7 -0.08,-0.12 0.08,-0.12" fill="#ffffff"/>
+              <polygon points="0,0.7 -0.08,0.12 0.08,0.12" fill="#ffffff"/>
+              <polygon points="-0.7,0 -0.12,-0.08 -0.12,0.08" fill="#ffffff"/>
+              <polygon points="0.7,0 0.12,-0.08 0.12,0.08" fill="#ffffff"/>
               <animate attributeName="opacity" values="0.85;1;0.9;1;0.85" dur="4.5s" repeatCount="indefinite" />
             </g>
           </g>
           
-          {/* Estrelas ao redor - menores e simples */}
+          {/* Estrelas ao redor com 4 pontas */}
           {[
-            // Próximas ao Cruzeiro
-            { x: 54, y: 30, r: 0.15, dur: 3.2 },
-            { x: 46, y: 34, r: 0.12, dur: 4.1 },
-            { x: 52, y: 38, r: 0.16, dur: 3.7 },
-            { x: 48, y: 40, r: 0.12, dur: 4.5 },
-            { x: 56, y: 35, r: 0.14, dur: 3.9 },
+            // Próximas ao Cruzeiro - um pouco maiores
+            { x: 54, y: 30, size: 'small', dur: 3.2 },
+            { x: 46, y: 34, size: 'tiny', dur: 4.1 },
+            { x: 52, y: 38, size: 'small', dur: 3.7 },
+            { x: 48, y: 40, size: 'tiny', dur: 4.5 },
+            { x: 56, y: 35, size: 'tiny', dur: 3.9 },
             
-            // Dispersas pelo céu - distribuição equilibrada
-            { x: 5, y: 5, r: 0.16, dur: 4.2 },
-            { x: 12, y: 8, r: 0.12, dur: 3.5 },
-            { x: 3, y: 15, r: 0.14, dur: 4.8 },
-            { x: 8, y: 22, r: 0.12, dur: 3.3 },
-            { x: 15, y: 4, r: 0.14, dur: 4.6 },
-            { x: 20, y: 12, r: 0.16, dur: 3.8 },
-            { x: 6, y: 30, r: 0.12, dur: 4.4 },
-            { x: 18, y: 28, r: 0.14, dur: 3.6 },
-            { x: 10, y: 40, r: 0.12, dur: 4.9 },
-            { x: 25, y: 35, r: 0.16, dur: 3.4 },
+            // Dispersas pelo céu
+            { x: 5, y: 5, size: 'small', dur: 4.2 },
+            { x: 12, y: 8, size: 'tiny', dur: 3.5 },
+            { x: 3, y: 15, size: 'tiny', dur: 4.8 },
+            { x: 8, y: 22, size: 'tiny', dur: 3.3 },
+            { x: 15, y: 4, size: 'tiny', dur: 4.6 },
+            { x: 20, y: 12, size: 'small', dur: 3.8 },
+            { x: 6, y: 30, size: 'tiny', dur: 4.4 },
+            { x: 18, y: 28, size: 'tiny', dur: 3.6 },
+            { x: 10, y: 40, size: 'tiny', dur: 4.9 },
+            { x: 25, y: 35, size: 'small', dur: 3.4 },
             
-            { x: 75, y: 5, r: 0.14, dur: 3.6 },
-            { x: 82, y: 10, r: 0.16, dur: 4.3 },
-            { x: 88, y: 8, r: 0.12, dur: 3.4 },
-            { x: 92, y: 15, r: 0.14, dur: 4.7 },
-            { x: 78, y: 22, r: 0.12, dur: 3.9 },
-            { x: 85, y: 28, r: 0.16, dur: 4.1 },
-            { x: 95, y: 25, r: 0.12, dur: 3.7 },
-            { x: 72, y: 35, r: 0.14, dur: 4.5 },
-            { x: 88, y: 40, r: 0.12, dur: 3.3 },
-            { x: 95, y: 50, r: 0.16, dur: 4.2 },
-            { x: 80, y: 55, r: 0.12, dur: 3.8 },
-            { x: 92, y: 60, r: 0.14, dur: 4.6 },
+            { x: 75, y: 5, size: 'tiny', dur: 3.6 },
+            { x: 82, y: 10, size: 'small', dur: 4.3 },
+            { x: 88, y: 8, size: 'tiny', dur: 3.4 },
+            { x: 92, y: 15, size: 'tiny', dur: 4.7 },
+            { x: 78, y: 22, size: 'tiny', dur: 3.9 },
+            { x: 85, y: 28, size: 'small', dur: 4.1 },
+            { x: 95, y: 25, size: 'tiny', dur: 3.7 },
+            { x: 72, y: 35, size: 'tiny', dur: 4.5 },
+            { x: 88, y: 40, size: 'tiny', dur: 3.3 },
+            { x: 95, y: 50, size: 'small', dur: 4.2 },
+            { x: 80, y: 55, size: 'tiny', dur: 3.8 },
+            { x: 92, y: 60, size: 'tiny', dur: 4.6 },
             
-            { x: 65, y: 50, r: 0.12, dur: 4.5 },
-            { x: 35, y: 55, r: 0.14, dur: 3.5 },
-            { x: 42, y: 48, r: 0.12, dur: 4.4 },
-            { x: 58, y: 55, r: 0.16, dur: 3.6 },
-            { x: 28, y: 48, r: 0.12, dur: 4.8 },
-            { x: 72, y: 48, r: 0.14, dur: 3.4 },
-            { x: 50, y: 60, r: 0.12, dur: 4.0 },
-            { x: 38, y: 65, r: 0.16, dur: 3.7 },
-            { x: 62, y: 65, r: 0.12, dur: 4.3 },
-            { x: 30, y: 70, r: 0.14, dur: 3.9 },
-            { x: 70, y: 70, r: 0.12, dur: 4.5 },
-            { x: 45, y: 75, r: 0.16, dur: 3.6 },
-            { x: 55, y: 75, r: 0.12, dur: 4.2 },
-            { x: 22, y: 60, r: 0.14, dur: 3.8 },
-            { x: 78, y: 60, r: 0.12, dur: 4.4 },
-            { x: 15, y: 75, r: 0.16, dur: 3.5 },
-            { x: 85, y: 75, r: 0.12, dur: 4.1 },
-            { x: 8, y: 85, r: 0.14, dur: 3.7 },
-            { x: 92, y: 85, r: 0.12, dur: 4.6 },
+            { x: 65, y: 50, size: 'tiny', dur: 4.5 },
+            { x: 35, y: 55, size: 'small', dur: 3.5 },
+            { x: 42, y: 48, size: 'tiny', dur: 4.4 },
+            { x: 58, y: 55, size: 'small', dur: 3.6 },
+            { x: 28, y: 48, size: 'tiny', dur: 4.8 },
+            { x: 72, y: 48, size: 'tiny', dur: 3.4 },
+            { x: 50, y: 60, size: 'tiny', dur: 4.0 },
+            { x: 38, y: 65, size: 'small', dur: 3.7 },
+            { x: 62, y: 65, size: 'tiny', dur: 4.3 },
+            { x: 30, y: 70, size: 'tiny', dur: 3.9 },
+            { x: 70, y: 70, size: 'tiny', dur: 4.5 },
+            { x: 45, y: 75, size: 'small', dur: 3.6 },
+            { x: 55, y: 75, size: 'tiny', dur: 4.2 },
+            { x: 22, y: 60, size: 'tiny', dur: 3.8 },
+            { x: 78, y: 60, size: 'tiny', dur: 4.4 },
+            { x: 15, y: 75, size: 'small', dur: 3.5 },
+            { x: 85, y: 75, size: 'tiny', dur: 4.1 },
+            { x: 8, y: 85, size: 'tiny', dur: 3.7 },
+            { x: 92, y: 85, size: 'tiny', dur: 4.6 },
           ].map((star, i) => (
-            <g key={`star-${i}`} filter="url(#star-halo)">
-              <circle cx={star.x} cy={star.y} r={star.r} fill="url(#star-small)"/>
-              <circle cx={star.x} cy={star.y} r={star.r * 0.4} fill="#ffffff"/>
+            <use 
+              key={`star-${i}`} 
+              href={star.size === 'small' ? '#star-small-template' : '#star-tiny-template'} 
+              x={star.x} 
+              y={star.y} 
+              filter="url(#star-halo)"
+            >
               <animate 
                 attributeName="opacity" 
                 values={`${0.35 + (i % 3) * 0.08};${0.5 + (i % 4) * 0.06};${0.38 + (i % 2) * 0.08};${0.45 + (i % 3) * 0.06};${0.35 + (i % 3) * 0.08}`}
                 dur={`${star.dur}s`}
                 repeatCount="indefinite"
               />
-            </g>
+            </use>
           ))}
         </svg>
       </div>
