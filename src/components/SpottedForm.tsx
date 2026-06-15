@@ -1,14 +1,13 @@
 'use client'
   
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { supabase, generateFingerprint, getVisitorInfo, trackSpottedCreated, trackClick } from '@/lib/supabase'
 import { contemPalavraProibida, formatTextHtml } from '@/lib/moderacao'
 import { useToast } from '@/context/ToastContext'
- 
+
 interface SpottedFormProps {
   onSpottedEnviado?: () => void
 }
- 
+
 export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -34,7 +33,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
     }
   }
 
-  // Callback para verificar palavras proibidas (evita race conditions)
+  // Callback para verificar palavras proibidas
   const verificarPalavrasProibidas = useCallback((texto: string) => {
     if (texto.length >= 10) {
       const resultado = contemPalavraProibida(texto)
@@ -71,53 +70,27 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
       return
     }
 
-    // Coleta informações do visitante para segurança e analytics
-    let fingerprint = ''
-    let messageHtml = ''
-    
-    try {
-      fingerprint = generateFingerprint()
-      messageHtml = formatTextHtml(message)
-      console.log('[SpottedForm] Fingerprint gerado:', fingerprint)
-    } catch (err) {
-      console.error('[SpottedForm] Erro ao gerar fingerprint:', err)
-    }
+    // Formatar HTML
+    const messageHtml = formatTextHtml(message)
 
-    // Track do clique em enviar
+    // Enviar para API
     try {
-      trackClick('submit_spotted', { message_length: message.length })
-    } catch (err) {
-      console.error('[SpottedForm] Erro ao trackear clique:', err)
-    }
-
-    // Usar API em vez de supabase client direto
-    // O IP é extraído pela API dos headers (mais seguro)
-    try {
-      console.log('[SpottedForm] Enviando para API...')
-      
       const response = await fetch('/api/spotteds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message,
           message_html: messageHtml,
-          author_fingerprint: fingerprint,
         })
       })
 
       const result = await response.json()
-      console.log('[SpottedForm] Resposta da API:', result)
 
       if (!response.ok || result.error) {
-        setError(`Erro ao enviar: ${result.error || 'Tente novamente.'}`)
+        setError(result.error || 'Erro ao enviar. Tente novamente.')
         showToast('Erro ao enviar spotted', 'error')
         setLoading(false)
         return
-      }
-
-      // Registra evento de criação para analytics
-      if (result.id) {
-        trackSpottedCreated(result.id)
       }
 
       setSuccess(true)
@@ -129,7 +102,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
       
       setTimeout(() => setSuccess(false), 4000)
     } catch (err) {
-      console.error('[SpottedForm] Erro ao enviar spotted:', err)
+      console.error('Erro:', err)
       setError('Erro ao enviar. Tente novamente.')
       showToast('Erro ao enviar spotted', 'error')
       setLoading(false)
@@ -159,7 +132,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
         <div className="flex gap-2 p-2 card-theme rounded-xl">
           <button
             type="button"
-            onClick={() => { applyFormat('bold'); trackClick('format_bold') }}
+            onClick={() => applyFormat('bold')}
             className="p-2 hover:bg-input rounded-lg transition-colors text-muted hover:text-primary"
             title="Negrito"
           >
@@ -169,7 +142,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
           </button>
           <button
             type="button"
-            onClick={() => { applyFormat('italic'); trackClick('format_italic') }}
+            onClick={() => applyFormat('italic')}
             className="p-2 hover:bg-input rounded-lg transition-colors text-muted hover:text-primary italic"
             title="Itálico"
           >
