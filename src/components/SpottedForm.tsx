@@ -72,16 +72,29 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
     }
 
     // Coleta informações do visitante para segurança e analytics
-    const fingerprint = generateFingerprint()
-    const visitorInfo = await getVisitorInfo()
-    const messageHtml = formatTextHtml(message)
+    let fingerprint = ''
+    let messageHtml = ''
+    
+    try {
+      fingerprint = generateFingerprint()
+      messageHtml = formatTextHtml(message)
+      console.log('[SpottedForm] Fingerprint gerado:', fingerprint)
+    } catch (err) {
+      console.error('[SpottedForm] Erro ao gerar fingerprint:', err)
+    }
 
     // Track do clique em enviar
-    trackClick('submit_spotted', { message_length: message.length })
+    try {
+      trackClick('submit_spotted', { message_length: message.length })
+    } catch (err) {
+      console.error('[SpottedForm] Erro ao trackear clique:', err)
+    }
 
     // Usar API em vez de supabase client direto
     // O IP é extraído pela API dos headers (mais seguro)
     try {
+      console.log('[SpottedForm] Enviando para API...')
+      
       const response = await fetch('/api/spotteds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,6 +106,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
       })
 
       const result = await response.json()
+      console.log('[SpottedForm] Resposta da API:', result)
 
       if (!response.ok || result.error) {
         setError(`Erro ao enviar: ${result.error || 'Tente novamente.'}`)
@@ -115,7 +129,7 @@ export default function SpottedForm({ onSpottedEnviado }: SpottedFormProps) {
       
       setTimeout(() => setSuccess(false), 4000)
     } catch (err) {
-      console.error('Erro ao enviar spotted:', err)
+      console.error('[SpottedForm] Erro ao enviar spotted:', err)
       setError('Erro ao enviar. Tente novamente.')
       showToast('Erro ao enviar spotted', 'error')
       setLoading(false)
