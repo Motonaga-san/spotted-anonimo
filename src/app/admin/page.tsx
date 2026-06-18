@@ -20,6 +20,8 @@ export default function AdminPage() {
     reportedCount: 0,
     todaySpotteds: 0,
     todayViews: 0,
+    todayUniqueVisitors: 0,
+    todaySessions: 0,
     weeklyData: [] as DailyStats[],
   })
   const { showToast } = useToast()
@@ -102,10 +104,19 @@ export default function AdminPage() {
       .select('*', { count: 'exact', head: true })
       .gte('created_at', today)
 
-    const { count: todayViews } = await supabase!
-      .from('page_views')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', today)
+    // Buscar estatísticas de visitas da API de analytics
+    let todayViews = 0
+    let todayUniqueVisitors = 0
+    let todaySessions = 0
+    try {
+      const analyticsRes = await fetch('/api/analytics?action=get-stats&days=1')
+      const analyticsData = await analyticsRes.json()
+      todayViews = analyticsData.totalEvents || 0
+      todayUniqueVisitors = analyticsData.uniqueVisitors || 0
+      todaySessions = analyticsData.totalSessions || 0
+    } catch {
+      console.error('Erro ao buscar analytics')
+    }
 
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     const { data: weeklyData } = await supabase!
@@ -122,6 +133,8 @@ export default function AdminPage() {
       reportedCount: reportedSpottedsData.length + reportedCommentsData.length,
       todaySpotteds: todaySpotteds || 0,
       todayViews: todayViews || 0,
+      todayUniqueVisitors: todayUniqueVisitors || 0,
+      todaySessions: todaySessions || 0,
       weeklyData: (weeklyData as DailyStats[]) || [],
     })
     setLoading(false)
@@ -262,7 +275,7 @@ export default function AdminPage() {
 
       <main className="container mx-auto px-4 py-6">
         {/* Stats Rápidos */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
           <div className="bg-[#171717] rounded-xl p-4 border border-[#262626]">
             <p className="text-2xl font-bold text-white">{stats.totalSpotteds}</p>
             <p className="text-xs text-gray-500">Total Spotteds</p>
@@ -280,8 +293,12 @@ export default function AdminPage() {
             <p className="text-xs text-gray-500">Reportados</p>
           </div>
           <div className="bg-[#171717] rounded-xl p-4 border border-[#262626]">
-            <p className="text-2xl font-bold text-green-400">{stats.todayViews}</p>
-            <p className="text-xs text-gray-500">Visitas Hoje</p>
+            <p className="text-2xl font-bold text-green-400">{stats.todayUniqueVisitors}</p>
+            <p className="text-xs text-gray-500">Visitantes Hoje</p>
+          </div>
+          <div className="bg-[#171717] rounded-xl p-4 border border-[#262626]">
+            <p className="text-2xl font-bold text-purple-400">{stats.todaySessions}</p>
+            <p className="text-xs text-gray-500">Sessões Hoje</p>
           </div>
         </div>
 
