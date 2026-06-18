@@ -73,11 +73,14 @@ interface UniqueDevice {
   is_attacker: boolean
 }
 
+type SortByType = 'visits' | 'spotteds' | 'recent' | 'risk'
+
 export default function SecurityDashboard() {
   const [sessions, setSessions] = useState<VisitorSession[]>([])
   const [events, setEvents] = useState<SecurityEvent[]>([])
   const [devices, setDevices] = useState<NetworkDevice[]>([])
   const [uniqueDevices, setUniqueDevices] = useState<UniqueDevice[]>([])
+  const [sortBy, setSortBy] = useState<SortByType>('visits')
   const [stats, setStats] = useState({
     totalSessions: 0,
     attackers: 0,
@@ -248,6 +251,23 @@ export default function SecurityDashboard() {
     return 'bg-green-500'
   }
 
+  // Ordenar dispositivos únicos
+  const getSortedDevices = () => {
+    const sorted = [...uniqueDevices]
+    switch (sortBy) {
+      case 'visits':
+        return sorted.sort((a, b) => b.visit_count - a.visit_count)
+      case 'spotteds':
+        return sorted.sort((a, b) => b.spotteds_created - a.spotteds_created)
+      case 'recent':
+        return sorted.sort((a, b) => new Date(b.last_seen).getTime() - new Date(a.last_seen).getTime())
+      case 'risk':
+        return sorted.sort((a, b) => b.risk_score - a.risk_score)
+      default:
+        return sorted
+    }
+  }
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical': return 'text-red-600 bg-red-100'
@@ -311,79 +331,159 @@ export default function SecurityDashboard() {
           </div>
         ) : (
           <>
-            {/* Sessions Tab */}
+            {/* Sessions Tab - Ranking de Visitantes */}
             {activeTab === 'sessions' && (
-              <div className="bg-gray-800 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-700">
-                    <tr>
-                      <th className="px-4 py-3 text-left">IP</th>
-                      <th className="px-4 py-3 text-left">Device</th>
-                      <th className="px-4 py-3 text-left">Location</th>
-                      <th className="px-4 py-3 text-left">Risk</th>
-                      <th className="px-4 py-3 text-left">Actions</th>
-                      <th className="px-4 py-3 text-left">Last Active</th>
-                      <th className="px-4 py-3 text-left">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-700">
-                    {sessions.map(session => (
-                      <tr key={session.session_id} className="hover:bg-gray-700/50">
-                        <td className="px-4 py-3">
-                          <div className="font-mono">{session.ip_address}</div>
-                          <div className="text-xs text-gray-500">{session.country || 'Unknown'}</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div>{session.os_type} {session.os_version}</div>
-                          <div className="text-xs text-gray-500">{session.browser} / {session.device_brand} {session.device_model}</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div>{session.city || '-'}</div>
-                          <div className="text-xs text-gray-500">{session.country || '-'}</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center space-x-2">
-                            <div className={`w-16 h-2 rounded ${getRiskColor(session.risk_score)}`}></div>
-                            <span className="text-sm">{session.risk_score}</span>
-                          </div>
-                          {session.is_attacker && (
-                            <span className="text-xs bg-red-600 px-2 py-1 rounded">ATTACKER</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm">
-                            {session.spotteds_created} spotteds, {session.comments_created} comments
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm">
-                            {new Date(session.last_activity).toLocaleString()}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => markAsAttacker(session.session_id, !session.is_attacker)}
-                              className={`px-2 py-1 rounded text-xs ${
-                                session.is_attacker 
-                                  ? 'bg-green-600 hover:bg-green-700' 
-                                  : 'bg-red-600 hover:bg-red-700'
-                              }`}
-                            >
-                              {session.is_attacker ? 'Unmark' : 'Mark Attacker'}
-                            </button>
-                            <button
-                              onClick={() => blockIP(session.ip_address)}
-                              className="px-2 py-1 rounded text-xs bg-gray-600 hover:bg-gray-500"
-                            >
-                              Block IP
-                            </button>
-                          </div>
-                        </td>
+              <div className="space-y-4">
+                {/* Controles de ordenacao */}
+                <div className="bg-gray-800 rounded-lg p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-gray-400 text-sm">Ordenar por:</span>
+                    <button
+                      onClick={() => setSortBy('visits')}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        sortBy === 'visits' ? 'bg-pink-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      Visitas
+                    </button>
+                    <button
+                      onClick={() => setSortBy('spotteds')}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        sortBy === 'spotteds' ? 'bg-pink-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      Spotteds
+                    </button>
+                    <button
+                      onClick={() => setSortBy('recent')}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        sortBy === 'recent' ? 'bg-pink-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      Recentes
+                    </button>
+                    <button
+                      onClick={() => setSortBy('risk')}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        sortBy === 'risk' ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      Risco
+                    </button>
+                    <span className="ml-auto text-gray-400 text-sm">
+                      {uniqueDevices.length} visitantes unicos
+                    </span>
+                  </div>
+                </div>
+
+                {/* Tabela de ranking */}
+                <div className="bg-gray-800 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-700">
+                      <tr>
+                        <th className="px-3 py-3 text-left text-xs">#</th>
+                        <th className="px-4 py-3 text-left">Visitante</th>
+                        <th className="px-4 py-3 text-left">Device</th>
+                        <th className="px-4 py-3 text-left">Location</th>
+                        <th className="px-4 py-3 text-center">Visitas</th>
+                        <th className="px-4 py-3 text-center">Posts</th>
+                        <th className="px-4 py-3 text-center">Risk</th>
+                        <th className="px-4 py-3 text-left">Last Seen</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700">
+                      {getSortedDevices().length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                            Nenhum visitante registrado ainda.
+                          </td>
+                        </tr>
+                      ) : (
+                        getSortedDevices().map((device, index) => (
+                          <tr 
+                            key={device.fingerprint} 
+                            className={`hover:bg-gray-700/50 ${
+                              device.is_attacker 
+                                ? 'bg-red-900/20' 
+                                : index < 3 
+                                  ? 'bg-pink-900/10' 
+                                  : ''
+                            }`}
+                          >
+                            <td className="px-3 py-3">
+                              {index < 3 ? (
+                                <span className={`text-lg ${
+                                  index === 0 ? 'text-yellow-400' : 
+                                  index === 1 ? 'text-gray-300' : 
+                                  'text-orange-400'
+                                }`}>
+                                  {index === 0 ? '1' : index === 1 ? '2' : '3'}
+                                </span>
+                              ) : (
+                                <span className="text-gray-500 text-sm">{index + 1}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="font-mono text-sm truncate max-w-[120px]" title={device.fingerprint}>
+                                {device.fingerprint?.slice(0, 10)}...
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {device.ip_address || '-'}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                {device.os_type === 'Windows' && <span>Win</span>}
+                                {device.os_type === 'macOS' && <span>Mac</span>}
+                                {device.os_type === 'iOS' && <span>iOS</span>}
+                                {device.os_type === 'Android' && <span>And</span>}
+                                {device.os_type === 'Linux' && <span>Lin</span>}
+                                {!['Windows', 'macOS', 'iOS', 'Android', 'Linux'].includes(device.os_type) && <span>?</span>}
+                                <div>
+                                  <div className="text-sm">{device.os_type || 'Unknown'}</div>
+                                  <div className="text-xs text-gray-500">{device.browser || '-'}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm">{device.country || '-'}</div>
+                              <div className="text-xs text-gray-500">{device.city || '-'}</div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="px-2 py-1 bg-blue-600/50 rounded text-sm font-medium">
+                                {device.visit_count}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`px-2 py-1 rounded text-sm font-medium ${
+                                device.spotteds_created > 0 ? 'bg-pink-600' : 'bg-gray-700'
+                              }`}>
+                                {device.spotteds_created}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <div className="flex flex-col items-center gap-1">
+                                <div className={`w-10 h-2 rounded ${getRiskColor(device.risk_score)}`}></div>
+                                <span className="text-xs">{device.risk_score}</span>
+                                {device.is_attacker && (
+                                  <span className="text-xs bg-red-600 px-1.5 py-0.5 rounded">ATK</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm">
+                                {device.last_seen ? new Date(device.last_seen).toLocaleDateString() : '-'}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {device.last_seen ? new Date(device.last_seen).toLocaleTimeString() : ''}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
