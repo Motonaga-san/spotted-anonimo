@@ -73,6 +73,80 @@ interface UniqueDevice {
   is_attacker: boolean
 }
 
+// Network Monitor Interfaces
+interface LocalNetworkDevice {
+  ip: string
+  mac?: string
+  hostname?: string
+  vendor?: string
+  device_type?: string
+  os_guess?: string
+  first_seen: string
+  last_seen: string
+  is_active: boolean
+  times_seen: number
+  open_ports?: number[]
+  services?: string[]
+}
+
+interface NetworkVisitor {
+  session_id: string
+  public_ip: string
+  local_ip?: string
+  webrtc_ip?: string
+  fingerprint: string
+  canvas_hash?: string
+  webgl_hash?: string
+  audio_hash?: string
+  font_list?: string[]
+  screen_resolution?: string
+  timezone?: string
+  language?: string
+  cpu_cores?: number
+  memory?: number
+  battery_level?: number
+  connection_type?: string
+  os_type: string
+  browser: string
+  device_brand?: string
+  device_model?: string
+  user_agent: string
+  is_same_network: boolean
+  subnet_match?: string
+  first_seen: string
+  last_seen: string
+  visit_count: number
+  spotteds_created: number
+  comments_created: number
+  risk_score: number
+  is_suspicious: boolean
+}
+
+interface NetworkStats {
+  total_local_visitors: number
+  unique_local_ips: number
+  apple_devices: number
+  android_devices: number
+  windows_devices: number
+  active_now: number
+  same_network_visits: number
+  avg_visits_per_device: number
+  top_visitor: NetworkVisitor | null
+  recent_visitors: NetworkVisitor[]
+}
+
+interface SubnetInfo {
+  cidr: string
+  network: string
+  broadcast: string
+  mask: string
+  first_ip: string
+  last_ip: string
+  total_hosts: number
+  detected_subnet: string
+  gateway?: string
+}
+
 type SortByType = 'visits' | 'spotteds' | 'recent' | 'risk'
 
 export default function SecurityDashboard() {
@@ -88,7 +162,13 @@ export default function SecurityDashboard() {
     appleDevices: 0
   })
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'sessions' | 'events' | 'devices' | 'correlation'>('sessions')
+  const [activeTab, setActiveTab] = useState<'sessions' | 'events' | 'devices' | 'network' | 'correlation'>('sessions')
+  const [networkVisitors, setNetworkVisitors] = useState<NetworkVisitor[]>([])
+  const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null)
+  const [subnetInfo, setSubnetInfo] = useState<SubnetInfo | null>(null)
+  const [networkLoading, setNetworkLoading] = useState(false)
+  const [localNetworkDevices, setLocalNetworkDevices] = useState<LocalNetworkDevice[]>([])
+  const [detectedSubnet, setDetectedSubnet] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -277,6 +357,227 @@ export default function SecurityDashboard() {
     }
   }
 
+  // === NETWORK MONITORING FUNCTIONS ===
+  
+  // Detectar subnet local via WebRTC
+  async function detectLocalNetwork(): Promise<string | null> {
+    try {
+      const pc = new RTCPeerConnection({ iceServers: [] })
+      pc.createDataChannel('')
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
+      
+      return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          pc.close()
+          resolve(null)
+        }, 3000)
+        
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            const candidate = event.candidate.candidate
+            // Extrair IP local do candidate
+            const ipMatch = candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/)
+            if (ipMatch) {
+              const ip = ipMatch[1]
+              // Verificar se é IP privado (10.x, 172.16-31.x, 192.168.x)
+              if (ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('172.')) {
+                clearTimeout(timeout)
+                pc.close()
+                resolve(ip)
+              }
+            }
+          }
+        }
+      })
+    } catch {
+      return null
+    }
+  }
+
+  // Calcular subnet a partir de um IP
+  function calculateSubnet(ip: string, maskBits: number = 24): SubnetInfo {
+    const parts = ip.split('.').map(Number)
+    const mask = [0, 0, 0, 0]
+    for (let i = 0; i < maskBits; i++) {
+      mask[Math.floor(i / 8)] |= (128 >> (i % 8))
+    }
+    
+    const network = parts.map((p, i) => p & mask[i])
+    const broadcast = network.map((n, i) => n | (255 - mask[i]))
+    
+    return {
+      cidr: `${network.join('.')}/${maskBits}`,
+      network: network.join('.'),
+      broadcast: broadcast.join('.'),
+      mask: mask.join('.'),
+      first_ip: `${network[0]}.${network[1]}.${network[2]}.${(network[3] + 1)}`,
+      last_ip: `${broadcast[0]}.${broadcast[1]}.${broadcast[2]}.${(broadcast[3] - 1)}`,
+      total_hosts: Math.pow(2, 32 - maskBits) - 2,
+      detected_subnet: `${network[0]}.${network[1]}.${network[2]}.0/${maskBits}`
+    }
+  }
+
+  // Verificar se um IP está na mesma subnet
+  function isSameSubnet(ip1: string, ip2: string, maskBits: number = 24): boolean {
+    const mask = (0xFFFFFFFF << (32 - maskBits)) >>> 0
+    const toInt = (ip: string) => ip.split('.').reduce((acc, oct) => (acc << 8) + parseInt(oct), 0) >>> 0
+    return (toInt(ip1) & mask) === (toInt(ip2) & mask)
+  }
+
+  // Fetch network visitors
+  async function fetchNetworkData() {
+    setNetworkLoading(true)
+    try {
+      // Detectar subnet local
+      const localIP = await detectLocalNetwork()
+      if (localIP) {
+        setDetectedSubnet(localIP)
+        setSubnetInfo(calculateSubnet(localIP, 24))
+      }
+
+      // Buscar todos os visitantes
+      const { data: allSessions } = await supabase
+        .from('visitor_sessions')
+        .select('*')
+        .order('last_activity', { ascending: false })
+        .limit(500)
+
+      if (!allSessions) {
+        setNetworkLoading(false)
+        return
+      }
+
+      // Processar e identificar visitantes da mesma rede
+      const networkVisitorsData: NetworkVisitor[] = []
+      const publicIPs = new Map<string, number>()
+      
+      // Primeiro, agrupar por IP público
+      allSessions.forEach((s: Record<string, unknown>) => {
+        const publicIP = s.ip_address as string
+        if (publicIP) {
+          publicIPs.set(publicIP, (publicIPs.get(publicIP) || 0) + 1)
+        }
+      })
+
+      // Encontrar o IP mais frequente (provavelmente o IP do prédio)
+      let mostCommonIP = ''
+      let maxCount = 0
+      publicIPs.forEach((count, ip) => {
+        if (count > maxCount) {
+          maxCount = count
+          mostCommonIP = ip
+        }
+      })
+
+      // Processar sessões
+      allSessions.forEach((s: Record<string, unknown>) => {
+        const publicIP = s.ip_address as string
+        const isSameNetwork = publicIP === mostCommonIP
+        
+        networkVisitorsData.push({
+          session_id: s.session_id as string || '',
+          public_ip: publicIP || '',
+          local_ip: s.local_ip as string || undefined,
+          webrtc_ip: s.webrtc_ip as string || undefined,
+          fingerprint: s.fingerprint as string || '',
+          canvas_hash: s.canvas_hash as string || undefined,
+          webgl_hash: s.webgl_hash as string || undefined,
+          audio_hash: s.audio_hash as string || undefined,
+          font_list: s.font_list as string[] || undefined,
+          screen_resolution: s.screen_resolution as string || undefined,
+          timezone: s.timezone as string || undefined,
+          language: s.language as string || undefined,
+          cpu_cores: s.cpu_cores as number || undefined,
+          memory: s.memory as number || undefined,
+          battery_level: s.battery_level as number || undefined,
+          connection_type: s.connection_type as string || undefined,
+          os_type: s.os_type as string || 'Unknown',
+          browser: s.browser as string || 'Unknown',
+          device_brand: s.device_brand as string || undefined,
+          device_model: s.device_model as string || undefined,
+          user_agent: s.user_agent as string || '',
+          is_same_network: isSameNetwork,
+          subnet_match: isSameNetwork ? mostCommonIP : undefined,
+          first_seen: s.started_at as string || '',
+          last_seen: s.last_activity as string || '',
+          visit_count: 1,
+          spotteds_created: (s.spotteds_created as number) || 0,
+          comments_created: (s.comments_created as number) || 0,
+          risk_score: (s.risk_score as number) || 0,
+          is_suspicious: (s.is_suspicious as boolean) || false
+        })
+      })
+
+      setNetworkVisitors(networkVisitorsData)
+
+      // Calcular estatísticas
+      const sameNetworkVisitors = networkVisitorsData.filter(v => v.is_same_network)
+      const uniqueLocalIPs = new Set(sameNetworkVisitors.map(v => v.fingerprint))
+      
+      const statsData: NetworkStats = {
+        total_local_visitors: sameNetworkVisitors.length,
+        unique_local_ips: uniqueLocalIPs.size,
+        apple_devices: sameNetworkVisitors.filter(v => 
+          v.os_type === 'macOS' || v.os_type === 'iOS' || v.device_brand === 'Apple'
+        ).length,
+        android_devices: sameNetworkVisitors.filter(v => v.os_type === 'Android').length,
+        windows_devices: sameNetworkVisitors.filter(v => v.os_type === 'Windows').length,
+        active_now: sameNetworkVisitors.filter(v => {
+          const lastSeen = new Date(v.last_seen)
+          const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000)
+          return lastSeen > fiveMinAgo
+        }).length,
+        same_network_visits: sameNetworkVisitors.reduce((acc, v) => acc + v.visit_count, 0),
+        avg_visits_per_device: sameNetworkVisitors.length > 0 
+          ? sameNetworkVisitors.reduce((acc, v) => acc + v.visit_count, 0) / sameNetworkVisitors.length 
+          : 0,
+        top_visitor: sameNetworkVisitors.sort((a, b) => b.spotteds_created - a.spotteds_created)[0] || null,
+        recent_visitors: sameNetworkVisitors.slice(0, 5)
+      }
+      
+      setNetworkStats(statsData)
+
+      // Agrupar por fingerprint para criar dispositivos locais
+      const deviceMap = new Map<string, LocalNetworkDevice>()
+      sameNetworkVisitors.forEach(v => {
+        if (!v.fingerprint) return
+        if (deviceMap.has(v.fingerprint)) {
+          const existing = deviceMap.get(v.fingerprint)!
+          existing.times_seen += 1
+          existing.last_seen = v.last_seen > existing.last_seen ? v.last_seen : existing.last_seen
+          existing.is_active = new Date(v.last_seen) > new Date(Date.now() - 10 * 60 * 1000)
+        } else {
+          deviceMap.set(v.fingerprint, {
+            ip: v.public_ip,
+            mac: undefined, // Não disponível via web
+            hostname: undefined,
+            vendor: v.device_brand || 'Unknown',
+            device_type: v.os_type?.includes('iOS') || v.os_type?.includes('Android') ? 'Mobile' : 'Desktop',
+            os_guess: v.os_type,
+            first_seen: v.first_seen,
+            last_seen: v.last_seen,
+            is_active: new Date(v.last_seen) > new Date(Date.now() - 10 * 60 * 1000),
+            times_seen: 1
+          })
+        }
+      })
+      
+      setLocalNetworkDevices(Array.from(deviceMap.values()))
+      
+    } catch (error) {
+      console.error('Error fetching network data:', error)
+    }
+    setNetworkLoading(false)
+  }
+
+  // Fetch network data when tab changes
+  useEffect(() => {
+    if (activeTab === 'network') {
+      fetchNetworkData()
+    }
+  }, [activeTab])
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -307,18 +608,20 @@ export default function SecurityDashboard() {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-2 mb-6">
-          {(['sessions', 'events', 'devices', 'correlation'] as const).map(tab => (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {(['sessions', 'events', 'devices', 'network', 'correlation'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-lg ${
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
                 activeTab === tab 
-                  ? 'bg-blue-600 text-white' 
+                  ? tab === 'network' 
+                    ? 'bg-purple-600 text-white' 
+                    : 'bg-blue-600 text-white' 
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'network' ? 'Network Monitor' : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </div>
@@ -671,6 +974,251 @@ export default function SecurityDashboard() {
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {/* Network Monitor Tab */}
+            {activeTab === 'network' && (
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-purple-400">Network Monitor</h2>
+                    <p className="text-gray-400 text-sm mt-1">Monitoramento de visitantes da mesma rede local</p>
+                  </div>
+                  <button
+                    onClick={fetchNetworkData}
+                    disabled={networkLoading}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium disabled:opacity-50"
+                  >
+                    {networkLoading ? 'Escaneando...' : 'Escanear Rede'}
+                  </button>
+                </div>
+
+                {/* Subnet Info Card */}
+                {subnetInfo && (
+                  <div className="bg-gray-800 rounded-lg p-4 border border-purple-500/30">
+                    <h3 className="text-lg font-semibold text-purple-300 mb-3">Subnet Detectada</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Network:</span>
+                        <div className="font-mono text-white">{subnetInfo.network}.0/24</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">IP Range:</span>
+                        <div className="font-mono text-white">{subnetInfo.first_ip} - {subnetInfo.last_ip.split('.').pop()}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Total Hosts:</span>
+                        <div className="font-mono text-white">{subnetInfo.total_hosts}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Seu IP Local:</span>
+                        <div className="font-mono text-green-400">{detectedSubnet || 'Detectando...'}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  <div className="bg-gray-800 rounded-lg p-4 border border-purple-500/20">
+                    <div className="text-3xl font-bold text-purple-400">{networkStats?.total_local_visitors || 0}</div>
+                    <div className="text-xs text-gray-400 mt-1">Visitantes da Rede</div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-4 border border-blue-500/20">
+                    <div className="text-3xl font-bold text-blue-400">{networkStats?.unique_local_ips || 0}</div>
+                    <div className="text-xs text-gray-400 mt-1">Dispositivos Unicos</div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-4 border border-gray-500/20">
+                    <div className="text-3xl font-bold text-white">{networkStats?.apple_devices || 0}</div>
+                    <div className="text-xs text-gray-400 mt-1">Apple</div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-4 border border-green-500/20">
+                    <div className="text-3xl font-bold text-green-400">{networkStats?.android_devices || 0}</div>
+                    <div className="text-xs text-gray-400 mt-1">Android</div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-4 border border-cyan-500/20">
+                    <div className="text-3xl font-bold text-cyan-400">{networkStats?.windows_devices || 0}</div>
+                    <div className="text-xs text-gray-400 mt-1">Windows</div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-4 border border-yellow-500/20">
+                    <div className="text-3xl font-bold text-yellow-400">{networkStats?.active_now || 0}</div>
+                    <div className="text-xs text-gray-400 mt-1">Ativos Agora</div>
+                  </div>
+                </div>
+
+                {/* Recent Local Visitors */}
+                <div className="bg-gray-800 rounded-lg overflow-hidden">
+                  <div className="px-4 py-3 bg-gray-700 flex items-center justify-between">
+                    <h3 className="font-semibold">Visitantes da Mesma Rede</h3>
+                    <span className="text-xs text-gray-400">
+                      {networkVisitors.filter(v => v.is_same_network).length} dispositivos detectados
+                    </span>
+                  </div>
+                  
+                  {networkLoading ? (
+                    <div className="p-8 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
+                      <p className="mt-2 text-gray-400 text-sm">Escaneando rede...</p>
+                    </div>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-700/50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs">Status</th>
+                          <th className="px-3 py-2 text-left text-xs">Device</th>
+                          <th className="px-3 py-2 text-left text-xs">Browser</th>
+                          <th className="px-3 py-2 text-left text-xs">Fingerprint</th>
+                          <th className="px-3 py-2 text-center text-xs">Posts</th>
+                          <th className="px-3 py-2 text-center text-xs">Risk</th>
+                          <th className="px-3 py-2 text-left text-xs">Last Seen</th>
+                          <th className="px-3 py-2 text-left text-xs">Details</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-700">
+                        {networkVisitors.filter(v => v.is_same_network).slice(0, 50).map((visitor, idx) => {
+                          const isActive = new Date(visitor.last_seen) > new Date(Date.now() - 5 * 60 * 1000)
+                          return (
+                            <tr key={visitor.session_id || idx} className={`hover:bg-gray-700/50 ${visitor.is_suspicious ? 'bg-red-900/20' : ''}`}>
+                              <td className="px-3 py-2">
+                                <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></div>
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="flex items-center gap-1">
+                                  {visitor.os_type === 'iOS' && <span className="text-xs">iOS</span>}
+                                  {visitor.os_type === 'macOS' && <span className="text-xs">Mac</span>}
+                                  {visitor.os_type === 'Android' && <span className="text-xs">And</span>}
+                                  {visitor.os_type === 'Windows' && <span className="text-xs">Win</span>}
+                                  {visitor.os_type === 'Linux' && <span className="text-xs">Lin</span>}
+                                  {!['iOS', 'macOS', 'Android', 'Windows', 'Linux'].includes(visitor.os_type) && <span className="text-xs">?</span>}
+                                </div>
+                                <div className="text-xs text-gray-500">{visitor.device_brand || '-'}</div>
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="text-xs truncate max-w-[80px]">{visitor.browser}</div>
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="font-mono text-xs text-gray-400 truncate max-w-[100px]" title={visitor.fingerprint}>
+                                  {visitor.fingerprint?.slice(0, 8)}...
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <span className={`px-1.5 py-0.5 rounded text-xs ${visitor.spotteds_created > 0 ? 'bg-pink-600' : 'bg-gray-700'}`}>
+                                  {visitor.spotteds_created}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <div className={`w-8 h-1.5 rounded ${getRiskColor(visitor.risk_score)}`}></div>
+                                  <span className="text-xs">{visitor.risk_score}</span>
+                                </div>
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="text-xs">{visitor.last_seen ? new Date(visitor.last_seen).toLocaleDateString() : '-'}</div>
+                                <div className="text-xs text-gray-500">{visitor.last_seen ? new Date(visitor.last_seen).toLocaleTimeString() : ''}</div>
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="text-xs text-gray-400 space-y-0.5">
+                                  {visitor.screen_resolution && <div>{visitor.screen_resolution}</div>}
+                                  {visitor.timezone && <div>TZ: {visitor.timezone}</div>}
+                                  {visitor.cpu_cores && <div>{visitor.cpu_cores} cores</div>}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                {/* Device Distribution */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* OS Distribution */}
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <h3 className="font-semibold mb-3">Distribuicao de OS</h3>
+                    <div className="space-y-2">
+                      {['iOS', 'macOS', 'Android', 'Windows', 'Linux'].map(os => {
+                        const count = networkVisitors.filter(v => v.is_same_network && v.os_type === os).length
+                        const total = networkVisitors.filter(v => v.is_same_network).length || 1
+                        const percent = Math.round((count / total) * 100)
+                        return (
+                          <div key={os} className="flex items-center gap-2">
+                            <span className="w-20 text-sm text-gray-400">{os}</span>
+                            <div className="flex-1 bg-gray-700 rounded-full h-4 overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full ${
+                                  os === 'iOS' || os === 'macOS' ? 'bg-gray-400' :
+                                  os === 'Android' ? 'bg-green-500' :
+                                  os === 'Windows' ? 'bg-blue-500' :
+                                  'bg-orange-500'
+                                }`}
+                                style={{ width: `${percent}%` }}
+                              ></div>
+                            </div>
+                            <span className="w-16 text-right text-sm">{count} ({percent}%)</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Activity Timeline */}
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <h3 className="font-semibold mb-3">Atividade Recente</h3>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {networkVisitors
+                        .filter(v => v.is_same_network)
+                        .sort((a, b) => new Date(b.last_seen).getTime() - new Date(a.last_seen).getTime())
+                        .slice(0, 10)
+                        .map((v, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <div className={`w-1.5 h-1.5 rounded-full ${
+                              new Date(v.last_seen) > new Date(Date.now() - 5 * 60 * 1000) ? 'bg-green-500' : 'bg-gray-500'
+                            }`}></div>
+                            <span className="text-gray-400">{v.os_type}</span>
+                            <span className="text-gray-500 flex-1 truncate">{v.fingerprint?.slice(0, 8)}...</span>
+                            <span className="text-gray-500">{new Date(v.last_seen).toLocaleTimeString()}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Advanced Fingerprinting Info */}
+                <div className="bg-gray-800 rounded-lg p-4 border border-purple-500/20">
+                  <h3 className="font-semibold text-purple-300 mb-3">Fingerprinting Avancado Coletado</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div>
+                      <span className="text-gray-500">Canvas Hash:</span>
+                      <div className="font-mono text-gray-300 truncate">
+                        {networkVisitors.find(v => v.canvas_hash)?.canvas_hash || 'Nenhum ainda'}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">WebGL Hash:</span>
+                      <div className="font-mono text-gray-300 truncate">
+                        {networkVisitors.find(v => v.webgl_hash)?.webgl_hash || 'Nenhum ainda'}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Audio Hash:</span>
+                      <div className="font-mono text-gray-300 truncate">
+                        {networkVisitors.find(v => v.audio_hash)?.audio_hash || 'Nenhum ainda'}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">WebRTC IPs:</span>
+                      <div className="font-mono text-gray-300">
+                        {networkVisitors.filter(v => v.webrtc_ip).length} detectados
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3">
+                    * Dados avancados serao coletados conforme visitantes acessarem o site com o script de fingerprinting ativo.
+                  </p>
                 </div>
               </div>
             )}

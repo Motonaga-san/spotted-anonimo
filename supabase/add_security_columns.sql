@@ -166,3 +166,103 @@ SELECT column_name, data_type
 FROM information_schema.columns 
 WHERE table_name = 'visitor_sessions' 
 ORDER BY ordinal_position;
+
+-- =============================================
+-- PARTE 2: FINGERPRINTING AVANCADO PARA NETWORK MONITOR
+-- =============================================
+
+-- Adicionar colunas de fingerprinting avancado
+DO $$ 
+BEGIN
+    -- Canvas fingerprint hash
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'canvas_hash') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN canvas_hash VARCHAR(32);
+    END IF;
+    
+    -- WebGL fingerprint hash
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'webgl_hash') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN webgl_hash VARCHAR(32);
+    END IF;
+    
+    -- Audio fingerprint hash
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'audio_hash') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN audio_hash VARCHAR(32);
+    END IF;
+    
+    -- Lista de fontes detectadas
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'font_list') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN font_list TEXT[];
+    END IF;
+    
+    -- Timezone (ex: America/Sao_Paulo)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'timezone') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN timezone VARCHAR(50);
+    END IF;
+    
+    -- CPU cores
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'cpu_cores') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN cpu_cores INTEGER;
+    END IF;
+    
+    -- Device memory (GB)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'memory') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN memory DECIMAL(4,1);
+    END IF;
+    
+    -- Battery level
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'battery_level') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN battery_level DECIMAL(3,1);
+    END IF;
+    
+    -- Connection type (4g, wifi, etc)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'connection_type') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN connection_type VARCHAR(20);
+    END IF;
+    
+    -- WebRTC local IP (IP interno da rede)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'webrtc_local_ip') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN webrtc_local_ip VARCHAR(45);
+    END IF;
+    
+    -- WebRTC public IP
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'webrtc_public_ip') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN webrtc_public_ip VARCHAR(45);
+    END IF;
+    
+    -- Local IP (same as webrtc_local_ip, kept for compatibility)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'local_ip') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN local_ip VARCHAR(45);
+    END IF;
+    
+    -- Page views count
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'page_views') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN page_views INTEGER DEFAULT 1;
+    END IF;
+    
+    -- Likes given count
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'likes_given') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN likes_given INTEGER DEFAULT 0;
+    END IF;
+    
+    -- WebGL vendor
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'webgl_vendor') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN webgl_vendor VARCHAR(100);
+    END IF;
+    
+    -- WebGL renderer
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitor_sessions' AND column_name = 'webgl_renderer') THEN
+        ALTER TABLE visitor_sessions ADD COLUMN webgl_renderer VARCHAR(200);
+    END IF;
+END $$;
+
+-- Criar indices para as novas colunas
+CREATE INDEX IF NOT EXISTS idx_visitor_sessions_canvas ON visitor_sessions(canvas_hash);
+CREATE INDEX IF NOT EXISTS idx_visitor_sessions_webgl ON visitor_sessions(webgl_hash);
+CREATE INDEX IF NOT EXISTS idx_visitor_sessions_webrtc_local ON visitor_sessions(webrtc_local_ip);
+CREATE INDEX IF NOT EXISTS idx_visitor_sessions_local_ip ON visitor_sessions(local_ip);
+
+-- Verificar todas as colunas
+SELECT column_name, data_type, is_nullable 
+FROM information_schema.columns 
+WHERE table_name = 'visitor_sessions' 
+ORDER BY ordinal_position;

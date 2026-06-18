@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useRef } from 'react'
 import { generateFingerprint, getSessionId, getFingerprintHash } from '@/utils/fingerprint'
+import { collectFingerprint, sendFingerprint } from '@/lib/fingerprint'
 
 interface SecurityTracker {
   registerSession: () => Promise<void>
@@ -13,6 +14,7 @@ interface SecurityTracker {
 export function useSecurityTracking(): SecurityTracker {
   const sessionId = useRef<string>('')
   const isRegistered = useRef(false)
+  const advancedFingerprintSent = useRef(false)
   
   // Registrar sessão
   const registerSession = useCallback(async () => {
@@ -46,6 +48,12 @@ export function useSecurityTracking(): SecurityTracker {
       if (response.ok) {
         isRegistered.current = true
         console.log('[Security] Session registered')
+        
+        // Enviar fingerprint avancado em background (nao bloqueia)
+        if (!advancedFingerprintSent.current) {
+          advancedFingerprintSent.current = true
+          sendFingerprint(sessionId.current).catch(console.error)
+        }
       }
     } catch (error) {
       console.error('[Security] Error registering session:', error)
