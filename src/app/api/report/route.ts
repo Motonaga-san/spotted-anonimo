@@ -19,12 +19,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  // 1. Inserir a denúncia
+  // 1. Inserir a denúncia (apenas campos que existem no schema atual)
   const reportData: Record<string, unknown> = {
     reason,
     status: 'pending',
-    reporter_ip: reporterIp,
-    reporter_fingerprint: reporterFingerprint,
   }
 
   if (type === 'spotted') {
