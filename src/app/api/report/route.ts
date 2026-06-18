@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   })
 
   const body = await request.json()
-  const { type, id, spottedId, reason, reporterIp, reporterFingerprint, fingerprintHash, fingerprintData } = body
+  const { type, id, spottedId, reason, reporterIp, reporterFingerprint } = body
 
   if (!type || !reason) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -25,8 +25,6 @@ export async function POST(request: NextRequest) {
     status: 'pending',
     reporter_ip: reporterIp,
     reporter_fingerprint: reporterFingerprint,
-    fingerprint_hash: fingerprintHash,
-    fingerprint_data: fingerprintData,
   }
 
   if (type === 'spotted') {
