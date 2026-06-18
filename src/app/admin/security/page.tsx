@@ -52,10 +52,32 @@ interface NetworkDevice {
   last_seen: string
 }
 
+interface UniqueDevice {
+  fingerprint: string
+  ip_address: string
+  os_type: string
+  os_version: string
+  browser: string
+  browser_version: string
+  device_brand: string
+  device_model: string
+  is_mobile: boolean
+  is_tablet: boolean
+  country: string
+  city: string
+  visit_count: number
+  spotteds_created: number
+  first_seen: string
+  last_seen: string
+  risk_score: number
+  is_attacker: boolean
+}
+
 export default function SecurityDashboard() {
   const [sessions, setSessions] = useState<VisitorSession[]>([])
   const [events, setEvents] = useState<SecurityEvent[]>([])
   const [devices, setDevices] = useState<NetworkDevice[]>([])
+  const [uniqueDevices, setUniqueDevices] = useState<UniqueDevice[]>([])
   const [stats, setStats] = useState({
     totalSessions: 0,
     attackers: 0,
@@ -124,11 +146,67 @@ export default function SecurityDashboard() {
       
       if (devicesData) setDevices(devicesData as NetworkDevice[])
 
+      // Buscar todas as sessões para agregar dispositivos únicos
+      const { data: allSessions } = await supabase
+        .from('visitor_sessions')
+        .select('*')
+        .order('last_activity', { ascending: false })
+        .limit(200)
+
+      // Agregar dispositivos únicos por fingerprint
+      const deviceMap = new Map<string, UniqueDevice>()
+      if (allSessions) {
+        allSessions.forEach((s: Record<string, unknown>) => {
+          const fp = (s.fingerprint as string) || (s.session_id as string)
+          if (!fp) return
+          
+          if (deviceMap.has(fp)) {
+            const existing = deviceMap.get(fp)!
+            existing.visit_count += 1
+            existing.spotteds_created += (s.spotteds_created as number) || 0
+            if (s.last_activity as string > existing.last_seen) {
+              existing.last_seen = s.last_activity as string
+            }
+            if (s.risk_score as number > existing.risk_score) {
+              existing.risk_score = s.risk_score as number
+            }
+            if (s.is_attacker as boolean) {
+              existing.is_attacker = true
+            }
+          } else {
+            deviceMap.set(fp, {
+              fingerprint: fp,
+              ip_address: s.ip_address as string || '',
+              os_type: s.os_type as string || 'Unknown',
+              os_version: s.os_version as string || '',
+              browser: s.browser as string || 'Unknown',
+              browser_version: s.browser_version as string || '',
+              device_brand: s.device_brand as string || '',
+              device_model: s.device_model as string || '',
+              is_mobile: s.is_mobile as boolean || false,
+              is_tablet: s.is_tablet as boolean || false,
+              country: s.country as string || '',
+              city: s.city as string || '',
+              visit_count: 1,
+              spotteds_created: (s.spotteds_created as number) || 0,
+              first_seen: s.started_at as string || '',
+              last_seen: s.last_activity as string || '',
+              risk_score: (s.risk_score as number) || 0,
+              is_attacker: (s.is_attacker as boolean) || false
+            })
+          }
+        })
+      }
+
+      // Ordenar por visitas
+      const sortedDevices = Array.from(deviceMap.values()).sort((a, b) => b.visit_count - a.visit_count)
+      setUniqueDevices(sortedDevices)
+
       // Calcular estatísticas
       const totalSessions = sessionsData?.length || 0
       const attackers = sessionsData?.filter(s => s.is_attacker).length || 0
       const suspicious = sessionsData?.filter(s => s.is_suspicious).length || 0
-      const appleDevices = devicesData?.filter(d => d.vendor === 'Apple').length || 0
+      const appleDevices = sortedDevices.filter(d => d.device_brand === 'Apple' || d.os_type === 'macOS' || d.os_type === 'iOS').length
       
       setStats({ totalSessions, attackers, suspicious, appleDevices })
     } catch (error) {
@@ -372,38 +450,128 @@ export default function SecurityDashboard() {
 
             {/* Devices Tab */}
             {activeTab === 'devices' && (
-              <div className="bg-gray-800 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-700">
-                    <tr>
-                      <th className="px-4 py-3 text-left">IP</th>
-                      <th className="px-4 py-3 text-left">MAC</th>
-                      <th className="px-4 py-3 text-left">Vendor</th>
-                      <th className="px-4 py-3 text-left">Type</th>
-                      <th className="px-4 py-3 text-left">SSID</th>
-                      <th className="px-4 py-3 text-left">Last Seen</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-700">
-                    {devices.map((device, i) => (
-                      <tr key={i} className={`hover:bg-gray-700/50 ${device.vendor === 'Apple' ? 'bg-blue-900/20' : ''}`}>
-                        <td className="px-4 py-3 font-mono">{device.ip_address}</td>
-                        <td className="px-4 py-3 font-mono text-sm">{device.mac_address}</td>
-                        <td className="px-4 py-3">
-                          {device.vendor === 'Apple' && (
-                            <span className="bg-blue-600 px-2 py-1 rounded text-xs">APPLE</span>
-                          )}
-                          {device.vendor}
-                        </td>
-                        <td className="px-4 py-3">{device.device_type}</td>
-                        <td className="px-4 py-3">{device.ssid || '-'}</td>
-                        <td className="px-4 py-3 text-sm">
-                          {new Date(device.last_seen).toLocaleString()}
-                        </td>
+              <div className="space-y-4">
+                {/* Stats de dispositivos */}
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <div className="text-gray-400 text-sm">Dispositivos Únicos</div>
+                    <div className="text-2xl font-bold">{uniqueDevices.length}</div>
+                  </div>
+                  <div className="bg-blue-900/30 rounded-lg p-4 border border-blue-700">
+                    <div className="text-blue-400 text-sm">Apple Devices</div>
+                    <div className="text-2xl font-bold text-blue-500">{stats.appleDevices}</div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <div className="text-gray-400 text-sm">Mobile</div>
+                    <div className="text-2xl font-bold">{uniqueDevices.filter(d => d.is_mobile).length}</div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <div className="text-gray-400 text-sm">Desktop</div>
+                    <div className="text-2xl font-bold">{uniqueDevices.filter(d => !d.is_mobile && !d.is_tablet).length}</div>
+                  </div>
+                </div>
+
+                {/* Tabela de dispositivos */}
+                <div className="bg-gray-800 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-700">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Device</th>
+                        <th className="px-4 py-3 text-left">OS / Browser</th>
+                        <th className="px-4 py-3 text-left">IP</th>
+                        <th className="px-4 py-3 text-left">Location</th>
+                        <th className="px-4 py-3 text-left">Visits</th>
+                        <th className="px-4 py-3 text-left">Posts</th>
+                        <th className="px-4 py-3 text-left">Last Seen</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700">
+                      {uniqueDevices.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                            Nenhum dispositivo registrado ainda. Acesse o site para gerar dados.
+                          </td>
+                        </tr>
+                      ) : (
+                        uniqueDevices.map((device) => (
+                          <tr key={device.fingerprint} className={`hover:bg-gray-700/50 ${
+                            device.device_brand === 'Apple' || device.os_type === 'macOS' || device.os_type === 'iOS' 
+                              ? 'bg-blue-900/10' 
+                              : device.is_attacker 
+                                ? 'bg-red-900/20' 
+                                : ''
+                          }`}>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                {device.is_mobile ? (
+                                  <span className="text-xl">📱</span>
+                                ) : device.is_tablet ? (
+                                  <span className="text-xl">📱</span>
+                                ) : (
+                                  <span className="text-xl">💻</span>
+                                )}
+                                <div>
+                                  <div className="font-medium">
+                                    {device.device_brand || device.os_type || 'Unknown'}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {device.device_model || '-'}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                {device.os_type === 'Windows' && <span className="text-blue-400">🪟</span>}
+                                {device.os_type === 'macOS' && <span>🍎</span>}
+                                {device.os_type === 'iOS' && <span>📱</span>}
+                                {device.os_type === 'Android' && <span className="text-green-400">🤖</span>}
+                                {device.os_type === 'Linux' && <span>🐧</span>}
+                                {!['Windows', 'macOS', 'iOS', 'Android', 'Linux'].includes(device.os_type) && <span>❓</span>}
+                                <div>
+                                  <div className="text-sm">
+                                    {device.os_type} {device.os_version}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {device.browser} {device.browser_version}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="font-mono text-sm">{device.ip_address || '-'}</div>
+                              <div className="text-xs text-gray-500 truncate max-w-[120px]">
+                                {device.fingerprint?.slice(0, 12)}...
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm">{device.country || '-'}</div>
+                              <div className="text-xs text-gray-500">{device.city || '-'}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-1 bg-gray-700 rounded text-sm">
+                                {device.visit_count}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`px-2 py-1 rounded text-sm ${
+                                device.spotteds_created > 0 ? 'bg-pink-600' : 'bg-gray-700'
+                              }`}>
+                                {device.spotteds_created}
+                              </span>
+                              {device.is_attacker && (
+                                <span className="ml-2 px-2 py-1 bg-red-600 rounded text-xs">ATTACKER</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {device.last_seen ? new Date(device.last_seen).toLocaleString() : '-'}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
