@@ -165,6 +165,16 @@ export async function POST(request: NextRequest) {
       language,
       referrer,
       first_url: url,
+      // Dados parseados do User-Agent
+      os_type: parsedUA.os_type,
+      os_version: parsedUA.os_version,
+      browser: parsedUA.browser,
+      browser_version: parsedUA.browser_version,
+      device_brand: parsedUA.device_brand,
+      device_model: parsedUA.device_model,
+      is_mobile: parsedUA.is_mobile,
+      is_tablet: parsedUA.is_tablet,
+      is_bot: parsedUA.is_bot,
       started_at: new Date().toISOString(),
       last_activity: new Date().toISOString()
     }
