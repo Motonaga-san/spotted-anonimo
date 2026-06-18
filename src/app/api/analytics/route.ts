@@ -13,10 +13,30 @@ function getSupabase() {
   })
 }
 
+// Extrair IP real do visitante dos headers
+function extractRealIP(request: NextRequest): string {
+  const headers = request.headers
+  const cfIP = headers.get('cf-connecting-ip')
+  const xRealIP = headers.get('x-real-ip')
+  const xForwardedFor = headers.get('x-forwarded-for')
+  const vercelIP = headers.get('x-vercel-forwarded-for')
+  
+  if (cfIP) return cfIP.trim()
+  if (xRealIP) return xRealIP.trim()
+  if (xForwardedFor) return xForwardedFor.split(',')[0].trim()
+  if (vercelIP) return vercelIP.split(',')[0].trim()
+  return 'unknown'
+}
+
 export async function POST(request: NextRequest) {
   const supabase = getSupabase()
   const body = await request.json()
   const { action, event, sessionId, data } = body
+
+  // Extrair IP real do request
+  const realIP = extractRealIP(request)
+  const userAgent = request.headers.get('user-agent') || ''
+  const country = request.headers.get('x-vercel-ip-country') || ''
 
   if (action === 'track-event' && event) {
     // Usar security_events como tabela unificada de eventos
@@ -24,11 +44,12 @@ export async function POST(request: NextRequest) {
       .from('security_events')
       .insert([{
         event_type: event.event_type || event.type || 'unknown',
-        session_id: sessionId,
-        ip_address: event.ip_address,
-        fingerprint: event.fingerprint,
-        action: event.action || 'track',
-        details: event
+        session_id: sessionId || event.session_id,
+        ip_address: event.visitor_ip || realIP,
+        fingerprint: event.visitor_fingerprint || event.fingerprint,
+        user_agent: userAgent,
+        action: event.page || event.action || 'track',
+        details: { ...event, country }
       }])
 
     if (error) {

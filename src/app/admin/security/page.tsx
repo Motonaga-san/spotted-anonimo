@@ -84,59 +84,36 @@ export default function SecurityDashboard() {
       
       if (sessionsData) setSessions(sessionsData as VisitorSession[])
 
-      // Buscar eventos de segurança
+      // Buscar eventos de segurança (agora inclui analytics)
       const { data: securityEventsData } = await supabase
         .from('security_events')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50)
-      
-      // Buscar eventos de analytics também
-      const { data: analyticsEventsData } = await supabase
-        .from('analytics_events')
-        .select('*')
-        .order('created_at', { ascending: false })
         .limit(100)
       
-      // Combinar e formatar eventos
+      // Formatar eventos
       const allEvents: SecurityEvent[] = []
       
       if (securityEventsData) {
         securityEventsData.forEach((e: Record<string, unknown>) => {
+          const details = e.details as Record<string, unknown> || {}
           allEvents.push({
             id: e.id as string,
             event_type: e.event_type as string,
             severity: (e.severity as string) || 'info',
-            ip_address: e.ip_address as string,
-            session_id: e.session_id as string,
+            ip_address: e.ip_address as string || details.visitor_ip as string || '',
+            session_id: e.session_id as string || '',
             action: e.action as string,
             content_preview: e.content_preview as string || '',
-            created_at: e.created_at as string
-          })
-        })
-      }
-      
-      if (analyticsEventsData) {
-        analyticsEventsData.forEach((e: Record<string, unknown>) => {
-          allEvents.push({
-            id: e.id as string,
-            event_type: e.event_type as string,
-            severity: 'info',
-            ip_address: e.visitor_ip as string || '',
-            session_id: e.session_id as string || '',
-            action: e.event_type as string,
-            content_preview: e.page ? `Page: ${e.page}` : JSON.stringify(e.event_data || {}),
             created_at: e.created_at as string,
-            visitor_fingerprint: e.visitor_fingerprint as string,
-            page: e.page as string,
-            country: e.country as string
+            visitor_fingerprint: e.fingerprint as string || details.visitor_fingerprint as string || '',
+            page: e.action as string,
+            country: details.country as string || ''
           })
         })
       }
       
-      // Ordenar por data
-      allEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      setEvents(allEvents.slice(0, 100))
+      setEvents(allEvents)
 
       // Buscar dispositivos de rede
       const { data: devicesData } = await supabase
