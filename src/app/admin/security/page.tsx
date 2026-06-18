@@ -37,6 +37,9 @@ interface SecurityEvent {
   action: string
   content_preview: string
   created_at: string
+  visitor_fingerprint?: string
+  page?: string
+  country?: string
 }
 
 interface NetworkDevice {
@@ -82,13 +85,58 @@ export default function SecurityDashboard() {
       if (sessionsData) setSessions(sessionsData as VisitorSession[])
 
       // Buscar eventos de segurança
-      const { data: eventsData } = await supabase
+      const { data: securityEventsData } = await supabase
         .from('security_events')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50)
       
-      if (eventsData) setEvents(eventsData as SecurityEvent[])
+      // Buscar eventos de analytics também
+      const { data: analyticsEventsData } = await supabase
+        .from('analytics_events')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100)
+      
+      // Combinar e formatar eventos
+      const allEvents: SecurityEvent[] = []
+      
+      if (securityEventsData) {
+        securityEventsData.forEach((e: Record<string, unknown>) => {
+          allEvents.push({
+            id: e.id as string,
+            event_type: e.event_type as string,
+            severity: (e.severity as string) || 'info',
+            ip_address: e.ip_address as string,
+            session_id: e.session_id as string,
+            action: e.action as string,
+            content_preview: e.content_preview as string || '',
+            created_at: e.created_at as string
+          })
+        })
+      }
+      
+      if (analyticsEventsData) {
+        analyticsEventsData.forEach((e: Record<string, unknown>) => {
+          allEvents.push({
+            id: e.id as string,
+            event_type: e.event_type as string,
+            severity: 'info',
+            ip_address: e.visitor_ip as string || '',
+            session_id: e.session_id as string || '',
+            action: e.event_type as string,
+            content_preview: e.page ? `Page: ${e.page}` : JSON.stringify(e.event_data || {}),
+            created_at: e.created_at as string,
+            visitor_fingerprint: e.visitor_fingerprint as string,
+            page: e.page as string,
+            country: e.country as string
+          })
+        })
+      }
+      
+      // Ordenar por data
+      allEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      setEvents(allEvents.slice(0, 100))
 
       // Buscar dispositivos de rede
       const { data: devicesData } = await supabase
@@ -287,44 +335,59 @@ export default function SecurityDashboard() {
             {/* Events Tab */}
             {activeTab === 'events' && (
               <div className="bg-gray-800 rounded-lg overflow-hidden">
+                <div className="p-4 bg-gray-700 text-sm text-gray-300">
+                  Mostrando {events.length} eventos de analytics e segurança
+                </div>
                 <table className="w-full">
                   <thead className="bg-gray-700">
                     <tr>
                       <th className="px-4 py-3 text-left">Time</th>
                       <th className="px-4 py-3 text-left">Type</th>
-                      <th className="px-4 py-3 text-left">Severity</th>
                       <th className="px-4 py-3 text-left">IP</th>
-                      <th className="px-4 py-3 text-left">Action</th>
-                      <th className="px-4 py-3 text-left">Preview</th>
+                      <th className="px-4 py-3 text-left">Fingerprint</th>
+                      <th className="px-4 py-3 text-left">Country</th>
+                      <th className="px-4 py-3 text-left">Page/Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-700">
-                    {events.map(event => (
-                      <tr key={event.id} className="hover:bg-gray-700/50">
-                        <td className="px-4 py-3 text-sm">
-                          {new Date(event.created_at).toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="px-2 py-1 rounded text-xs bg-gray-600">
-                            {event.event_type}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded text-xs ${getSeverityColor(event.severity)}`}>
-                            {event.severity}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-mono text-sm">
-                          {event.ip_address}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {event.action}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-400 truncate max-w-xs">
-                          {event.content_preview || '-'}
+                    {events.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                          Nenhum evento registrado ainda. Acesse o site para gerar eventos.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      events.map(event => (
+                        <tr key={event.id} className="hover:bg-gray-700/50">
+                          <td className="px-4 py-3 text-sm">
+                            {new Date(event.created_at).toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              event.event_type === 'page_view' ? 'bg-blue-600' :
+                              event.event_type === 'click' ? 'bg-green-600' :
+                              event.event_type === 'spotteds_viewed' ? 'bg-purple-600' :
+                              event.event_type === 'spotted_created' ? 'bg-pink-600' :
+                              'bg-gray-600'
+                            }`}>
+                              {event.event_type}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-mono text-sm">
+                            {event.ip_address || '-'}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs text-gray-400">
+                            {event.visitor_fingerprint ? event.visitor_fingerprint.slice(0, 16) + '...' : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {event.country || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-400 truncate max-w-xs">
+                            {event.page || event.action || '-'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
